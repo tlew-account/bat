@@ -1,1 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scout Pro — Basketball Scouting</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  :root {
+    --bg:          #f4f6fa;
+    --surface:     #ffffff;
+    --surface2:    #edf0f7;
+    --border:      #d8dde8;
+    --border2:     #c4ccd9;
+    --accent:      #c47f00;
+    --accent-dim:  #9a6200;
+    --accent-glow: rgba(196,127,0,0.09);
+    --text:        #1a1f2e;
+    --muted:       #6b7691;
+    --dim:         #9aa0b4;
+    --green:       #1a9e5c;
+    --blue:        #2271d6;
+    --red:         #d63b3b;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow', sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Court texture overlay ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,0.025) 39px, rgba(0,0,0,0.025) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,0.018) 39px, rgba(0,0,0,0.018) 40px);
+  }
+
+  /* ── Header ── */
+  #header {
+    position: sticky; top: 0; z-index: 200;
+    background: rgba(244,246,250,0.96);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    height: 54px; padding: 0 20px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 8px;
+    margin-right: 28px; flex-shrink: 0;
+  }
+  .logo-icon { font-size: 20px; }
+  .logo-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px; font-weight: 900; letter-spacing: 1px;
+    color: var(--text);
+  }
+  .logo-text span { color: var(--accent); font-weight: 300; letter-spacing: 3px; }
+
+  /* ── Nav tabs ── */
+  #nav { display: flex; gap: 0; overflow-x: auto; scrollbar-width: none; }
+  #nav::-webkit-scrollbar { display: none; }
+
+  .nav-tab {
+    display: flex; align-items: center; gap: 7px;
+    padding: 0 16px; height: 54px; cursor: pointer;
+    border: none; background: transparent;
+    color: var(--muted); font-family: 'Barlow', sans-serif;
+    font-size: 13px; font-weight: 500; white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+    position: relative;
+  }
+  .nav-tab:hover { color: var(--text); background: rgba(0,0,0,0.04); }
+  .nav-tab.active {
+    color: var(--accent); font-weight: 700;
+    border-bottom-color: var(--accent);
+    background: var(--accent-glow);
+  }
+  .nav-count {
+    background: var(--border2); border-radius: 20px;
+    padding: 1px 6px; font-size: 10px; color: var(--muted); font-weight: 600;
+  }
+  .nav-tab.active .nav-count { background: rgba(196,127,0,0.15); color: var(--accent); }
+
+  /* ── Page ── */
+  #page {
+    position: relative; z-index: 1;
+    max-width: 920px; margin: 0 auto;
+    padding: 32px 20px 100px;
+  }
+
+  .page-header { margin-bottom: 28px; }
+  .page-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px; font-weight: 900; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .page-title-bar {
+    height: 3px; width: 60px; margin-top: 8px;
+    background: linear-gradient(to right, var(--accent), transparent);
+    border-radius: 2px;
+  }
+
+  /* ── List view ── */
+  .list-toolbar {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  }
+  .record-count { font-size: 12px; color: var(--muted); }
+
+  .record-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .record-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 13px 16px;
+    display: flex; align-items: center; gap: 12; cursor: pointer;
+    transition: border-color .15s, background .15s, box-shadow .15s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .record-card:hover { border-color: var(--accent); background: var(--surface); box-shadow: 0 3px 10px rgba(0,0,0,0.10); }
+  .record-card-body { flex: 1; min-width: 0; }
+  .record-card-name { font-weight: 700; font-size: 14px; color: var(--text); margin-bottom: 2px; }
+  .record-card-sub { font-size: 12px; color: var(--muted); }
+  .record-card-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+  /* ── KYP cards grid ── */
+  .kyp-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+
+  .kyp-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; width: 300px; position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  }
+  .kyp-card-header {
+    background: linear-gradient(135deg, #e8ecf5 0%, #dde3ef 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 18px 14px;
+    display: flex; gap: 14px; align-items: center;
+  }
+  .kyp-avatar {
+    width: 60px; height: 60px; border-radius: 10px;
+    background: rgba(196,127,0,0.10); border: 2px solid rgba(196,127,0,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px; font-weight: 900; color: var(--accent);
+    overflow: hidden; flex-shrink: 0;
+  }
+  .kyp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .kyp-player-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 900; color: var(--text); letter-spacing: 0.3px;
+    margin-bottom: 5px;
+  }
+  .kyp-badges-row { display: flex; gap: 5px; flex-wrap: wrap; }
+  .kyp-body { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  .kyp-bullet { display: flex; gap: 7px; align-items: flex-start; margin-bottom: 5px; }
+  .kyp-bullet-dot { color: var(--accent); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+  .kyp-bullet-text { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .kyp-attr-badges { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 5px; }
+  .attr-badge {
+    background: var(--accent-glow); border: 1px solid rgba(196,127,0,0.25);
+    border-radius: 20px; padding: 3px 9px;
+    display: flex; align-items: center; gap: 4px; font-size: 11px;
+    color: var(--accent); font-weight: 600;
+  }
+  .kyp-card-edit-bar {
+    position: absolute; top: 8px; right: 8px;
+    display: flex; gap: 4px;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center; padding: 70px 20px; color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; opacity: 0.25; margin-bottom: 14px; }
+  .empty-text { font-size: 14px; margin-bottom: 22px; }
+
+  /* ── Form view ── */
+  .form-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+  }
+  .form-title { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); }
+
+  .form-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* ── Collapsible section ── */
+  .section { margin-bottom: 20px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .section-head {
+    width: 100%; text-align: left; background: var(--surface2);
+    border: none; padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Barlow', sans-serif;
+  }
+  .section-head.collapsed { border-bottom: none; }
+  .section-diamond { font-size: 8px; font-weight: 900; color: var(--accent); }
+  .section-label { font-size: 13px; font-weight: 700; color: var(--text); flex: 1; }
+  .section-label.blue { color: var(--blue); }
+  .section-label.blue ~ .section-diamond { color: var(--blue); }
+  .section-caret { font-size: 11px; color: var(--muted); }
+  .section-body { padding: 16px 16px 4px; display: block; }
+  .section-body.hidden { display: none; }
+
+  .subsection { margin-bottom: 20px; }
+  .subsection-title {
+    font-size: 10px; font-weight: 800; color: var(--muted);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 22px; }
+
+  /* ── Fields ── */
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block; font-size: 10px; font-weight: 700; color: var(--muted);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px;
+  }
+  .field-hint { font-size: 11px; color: var(--dim); margin-bottom: 4px; }
+  .field textarea, .field input[type="text"], .field input[type="url"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px;
+    padding: 8px 10px; font-family: 'Barlow', sans-serif; line-height: 1.6;
+    outline: none; resize: vertical;
+    transition: border-color .15s;
+  }
+  .field textarea:focus, .field input:focus { border-color: var(--accent); }
+  .field textarea { min-height: 68px; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 6px; border: none; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-weight: 600;
+    transition: opacity .15s, background .15s; white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.82; }
+  .btn-sm { font-size: 11px; padding: 4px 10px; }
+  .btn-md { font-size: 13px; padding: 8px 16px; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-default { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); }
+  .btn-danger { background: transparent; border: 1px solid rgba(240,80,80,0.35); color: var(--red); }
+  .btn-ghost { background: transparent; color: var(--muted); }
+
+  /* ── Badge small ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    background: rgba(196,127,0,0.10); color: var(--accent);
+    border: 1px solid rgba(196,127,0,0.25);
+    border-radius: 4px; padding: 2px 7px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .badge-blue { background: rgba(34,113,214,0.10); color: var(--blue); border-color: rgba(34,113,214,0.25); }
+
+  /* ── Position picker ── */
+  .pos-picker { display: flex; gap: 5px; }
+  .pos-btn {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--muted); padding: 7px 4px;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: 'Barlow', sans-serif; transition: all .15s;
+  }
+  .pos-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  /* ── Badge picker ── */
+  .badge-picker { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+  .badge-pick-btn {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px;
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--muted); cursor: pointer;
+    font-family: 'Barlow', sans-serif; transition: all .15s;
+  }
+  .badge-pick-btn.active {
+    background: var(--accent-glow); border-color: rgba(196,127,0,0.5);
+    color: var(--accent);
+  }
+
+  /* ── View toggle ── */
+  .view-toggle { display: flex; gap: 4px; }
+  .vtbtn {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; padding: 4px 10px; font-size: 11px;
+    font-weight: 600; color: var(--muted); cursor: pointer;
+    font-family: 'Barlow', sans-serif; transition: all .15s;
+  }
+  .vtbtn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  /* ── Bullet inputs ── */
+  .bullet-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .bullet-dot { color: var(--accent); font-weight: 900; font-size: 16px; flex-shrink: 0; }
+  .bullet-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 13px;
+    padding: 7px 10px; font-family: 'Barlow', sans-serif; outline: none;
+    transition: border-color .15s;
+  }
+  .bullet-input:focus { border-color: var(--accent); }
+
+  /* ── Animations ── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fadeIn .2s ease both; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">
+    <span class="logo-icon">🏀</span>
+    <div class="logo-text">SCOUT<span>PRO</span></div>
+  </div>
+  <nav id="nav"></nav>
+</div>
+
+<div id="page"></div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2,9);
+const nowStr = () => new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+
+function loadStore(key, def) {
+  try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : def; } catch { return def; }
+}
+function saveStore(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+const DB = {
+  coaches:   loadStore('sp_coaches',   []),
+  teams:     loadStore('sp_teams',     []),
+  players:   loadStore('sp_players',   []),
+  playbooks: loadStore('sp_playbooks', []),
+  reports:   loadStore('sp_reports',   []),
+  kyps:      loadStore('sp_kyps',      []),
+};
+function persist(key) { saveStore('sp_' + key, DB[key]); }
+
+// ─── App state ────────────────────────────────────────────────────────────────
+let currentTab = 'coaches';
+let editingRecord = null;   // null = list view
+let kypView = 'list';       // 'list' | 'cards'
+
+// ─── TABS CONFIG ──────────────────────────────────────────────────────────────
+const TABS = [
+  { key: 'coaches',   label: 'Coaches',   icon: '🎙' },
+  { key: 'teams',     label: 'Teams',     icon: '🏟' },
+  { key: 'players',   label: 'Players',   icon: '🏀' },
+  { key: 'playbooks', label: 'Playbooks', icon: '📋' },
+  { key: 'reports',   label: 'Reports',   icon: '📊' },
+  { key: 'kyps',      label: 'KYPs',      icon: '🃏' },
+];
+
+// ─── BLANK RECORD FACTORIES ───────────────────────────────────────────────────
+function blankCoach() {
+  return { id: uid(), date: nowStr(), name:'', team:'', lineup:'', ato:'', decoys:'' };
+}
+function blankTeam() {
+  return {
+    id:uid(), date:nowStr(), name:'', league:'', season:'',
+    corners:'', overload:'', trailer:'', earlyOptions:'',
+    trigger:'', flowTypes:'', secondaryOptions:'', deactivate:'',
+    fiveOut:'', horns:'', chin:'', othersHC:'',
+    denyEntry:'', specificSituations:'',
+    strongSide:'', weakSideLP:'',
+    onBallCov:'', offBallCov:'', pnrTime:'', pnrLocation:'', pnrSituation:'',
+    pickUpEarly:'', direction:'', safety:'',
+    standardCov:'', standardTags:'', digStunt:'', covTiming:'', covPlace:'',
+    doDouble:'', doDig:'', doForce:'', mismatch:'', weakSideBeh:'',
+    helpLines:'', doSwitch:'',
+    inbounderDef:'', zoneBOB:'',
+    zoneWhen:'', zoneType:'',
+    press:'', doubleTeam:'',
+    aggressive:'', upDown:'', fanbase:'', lockerRoom:'', triggers:'', wakesUp:'',
+  };
+}
+function blankPlayer() {
+  return {
+    id:uid(), date:nowStr(), name:'', team:'', number:'', position:'',
+    strongHand:'', dribbling:'', shoulderTurn:'', skipHammer:'', handLocation:'',
+    form:'', color:'', shootType:'', shootLocation:'',
+    pnrWhere:'', pnrCoverages:'', pnrSpecial:'', bigShortRoll:'', decisionMaker:'', canRisk:'',
+    pinDown:'', rimRunner:'', backdoor:'', stretch45:'', guardPost:'', highVolume:'',
+    rimRunnerDef:'', defend94:'',
+    canSwitch:'', switchBack:'', recoveryOnBall:'', recoveryOffBall:'',
+    shotBlocker:'', charges:'', guardReb:'', offRebThreat:'',
+    bumpRecover:'', trailDeny:'', forceBackdoor:'',
+    height:'', wingspan:'', athleticism:'', strengthCond:'',
+    onBallAgg:'', offBallAgg:'', upDown:'', frustration:'', lateGame:'', leadership:'',
+  };
+}
+function blankPlaybook() {
+  return { id:uid(), date:nowStr(), name:'', team:'', handSignals:'', howTheyCall:'', howWeCall:'', bySpacing:'', byEntry:'', byAction:'' };
+}
+function blankReport() {
+  return { id:uid(), date:nowStr(), name:'', opponent:'', hotPlays:'', defNotes:'', starter:'', primaryBackup:'', secondaryBackup:'', majorTendencies:'', majorKeys:'', contributors:'', minorContributors:'' };
+}
+function blankKYP() {
+  return { id:uid(), date:nowStr(), name:'', team:'', number:'', position:'', height:'', imageUrl:'', bullets:['','','','',''], badges:[] };
+}
+
+// ─── BADGES ───────────────────────────────────────────────────────────────────
+const ALL_BADGES = [
+  {icon:'🎯', key:'scorer',     label:'Scorer'},
+  {icon:'🏀', key:'pnr',        label:'PNR Threat'},
+  {icon:'🛡️', key:'defender',   label:'Lock-Down Defender'},
+  {icon:'📏', key:'stretch',    label:'Stretch'},
+  {icon:'⚡', key:'athlete',    label:'Elite Athlete'},
+  {icon:'🤝', key:'playmaker',  label:'Playmaker'},
+  {icon:'💪', key:'post',       label:'Post Presence'},
+  {icon:'🔥', key:'clutch',     label:'Clutch'},
+  {icon:'🔄', key:'switchable', label:'Switchable'},
+  {icon:'🪜', key:'rimrunner',  label:'Rim Runner'},
+  {icon:'⚠️', key:'foulprone',  label:'Foul Prone'},
+  {icon:'📊', key:'highvolume', label:'High Volume'},
+  {icon:'🧊', key:'coldhand',   label:'Cold Hand'},
+  {icon:'🦾', key:'twoway',     label:'Two-Way'},
+  {icon:'🎭', key:'emotional',  label:'Emotional'},
+  {icon:'👑', key:'leader',     label:'Leader'},
+];
+
+const POSITIONS = ['PG','SG','SF','PF','C'];
+
+// ─── HTML Helpers ─────────────────────────────────────────────────────────────
+const h = (tag, cls, inner='', attrs='') =>
+  `<${tag}${cls?' class="'+cls+'"':''}${attrs?(' '+attrs):''}>${inner}</${tag}>`;
+
+function badge(text, blue=false) {
+  return `<span class="badge${blue?' badge-blue':''}">${text}</span>`;
+}
+
+function field(label, key, value='', rows=3, hint='') {
+  const hintHtml = hint ? `<div class="field-hint">${hint}</div>` : '';
+  const el = rows > 1
+    ? `<textarea rows="${rows}" data-key="${key}" oninput="updateEdit('${key}',this.value)">${esc(value)}</textarea>`
+    : `<input type="text" data-key="${key}" value="${esc(value)}" oninput="updateEdit('${key}',this.value)">`;
+  return `<div class="field"><label>${label}</label>${hintHtml}${el}</div>`;
+}
+
+function fieldInput(label, key, value='', placeholder='') {
+  return `<div class="field"><label>${label}</label><input type="text" value="${esc(value)}" placeholder="${placeholder}" oninput="updateEdit('${key}',this.value)"></div>`;
+}
+
+function section(title, body, colorClass='') {
+  const id = 'sec_' + Math.random().toString(36).slice(2,7);
+  return `<div class="section">
+    <button class="section-head" onclick="toggleSection('${id}')">
+      <span class="section-diamond">◆</span>
+      <span class="section-label ${colorClass}">${title}</span>
+      <span class="section-caret" id="caret_${id}">▲</span>
+    </button>
+    <div class="section-body" id="${id}">${body}</div>
+  </div>`;
+}
+
+function subsection(title, body) {
+  return `<div class="subsection"><div class="subsection-title">${title}</div>${body}</div>`;
+}
+
+function grid2(...fields) {
+  return `<div class="grid2">${fields.join('')}</div>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Toggle section collapse ──────────────────────────────────────────────────
+function toggleSection(id) {
+  const body = document.getElementById(id);
+  const caret = document.getElementById('caret_' + id);
+  const head = body.previousElementSibling;
+  body.classList.toggle('hidden');
+  head.classList.toggle('collapsed');
+  caret.textContent = body.classList.contains('hidden') ? '▼' : '▲';
+}
+
+// ─── Update editing record ────────────────────────────────────────────────────
+function updateEdit(key, value) {
+  if (!editingRecord) return;
+  editingRecord[key] = value;
+}
+
+function setPosition(pos) {
+  if (!editingRecord) return;
+  editingRecord.position = pos;
+  document.querySelectorAll('.pos-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.pos === pos);
+  });
+}
+
+function toggleBadge(key) {
+  if (!editingRecord) return;
+  const idx = editingRecord.badges.indexOf(key);
+  if (idx >= 0) editingRecord.badges.splice(idx,1); else editingRecord.badges.push(key);
+  document.querySelectorAll('.badge-pick-btn').forEach(b => {
+    b.classList.toggle('active', editingRecord.badges.includes(b.dataset.badge));
+  });
+}
+
+function updateBullet(i, val) {
+  if (!editingRecord) return;
+  editingRecord.bullets[i] = val;
+}
+
+// ─── CRUD ops ─────────────────────────────────────────────────────────────────
+function addRecord(tab) {
+  const blanks = { coaches:blankCoach, teams:blankTeam, players:blankPlayer, playbooks:blankPlaybook, reports:blankReport, kyps:blankKYP };
+  editingRecord = blanks[tab]();
+  render();
+}
+
+function editRecord(tab, id) {
+  editingRecord = JSON.parse(JSON.stringify(DB[tab].find(r=>r.id===id)));
+  render();
+}
+
+function saveRecord() {
+  const tab = currentTab;
+  const existing = DB[tab].findIndex(r => r.id === editingRecord.id);
+  if (existing >= 0) DB[tab][existing] = editingRecord;
+  else DB[tab].push(editingRecord);
+  persist(tab);
+  editingRecord = null;
+  render();
+}
+
+function cancelEdit() {
+  editingRecord = null;
+  render();
+}
+
+function deleteRecord(tab, id) {
+  if (!confirm('Delete this record?')) return;
+  DB[tab] = DB[tab].filter(r => r.id !== id);
+  persist(tab);
+  render();
+}
+
+function setKypView(v) { kypView = v; render(); }
+
+// ─── NAV RENDER ───────────────────────────────────────────────────────────────
+function renderNav() {
+  document.getElementById('nav').innerHTML = TABS.map(t => `
+    <button class="nav-tab${currentTab===t.key?' active':''}" onclick="switchTab('${t.key}')">
+      <span>${t.icon}</span>${t.label}
+      <span class="nav-count">${DB[t.key].length}</span>
+    </button>
+  `).join('');
+}
+
+function switchTab(key) {
+  currentTab = key;
+  editingRecord = null;
+  render();
+}
+
+// ─── PAGE RENDER ──────────────────────────────────────────────────────────────
+function render() {
+  renderNav();
+  const page = document.getElementById('page');
+  const tab = TABS.find(t => t.key === currentTab);
+
+  let content = '';
+  if (editingRecord) {
+    content = renderForm(currentTab, editingRecord);
+  } else {
+    content = renderList(currentTab);
+  }
+
+  page.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">${tab.icon} ${tab.label}</div>
+      <div class="page-title-bar"></div>
+    </div>
+    <div class="fade-in">${content}</div>
+  `;
+}
+
+// ─── LIST VIEW ────────────────────────────────────────────────────────────────
+function getTitle(tab, r) {
+  if (tab==='coaches') return r.name || 'Unnamed Coach';
+  if (tab==='teams')   return r.name || 'Unnamed Team';
+  if (tab==='players') return r.name || 'Unnamed Player';
+  if (tab==='playbooks') return r.name || 'Unnamed Playbook';
+  if (tab==='reports') return r.name || 'Unnamed Report';
+  if (tab==='kyps')    return r.name || 'Unnamed Player';
+}
+function getMeta(tab, r) {
+  if (tab==='coaches') return r.team;
+  if (tab==='teams')   return r.season;
+  if (tab==='players') return r.position;
+  if (tab==='playbooks') return r.team;
+  if (tab==='reports') return r.opponent;
+  if (tab==='kyps')    return r.position;
+}
+function getSingular(tab) {
+  return {coaches:'Coach',teams:'Team',players:'Player',playbooks:'Playbook',reports:'Report',kyps:'KYP'}[tab];
+}
+
+function renderList(tab) {
+  const records = DB[tab];
+  const singular = getSingular(tab);
+  const isKyp = tab === 'kyps';
+
+  let toolbar = `<div class="list-toolbar">
+    <span class="record-count">${records.length} record${records.length!==1?'s':''}</span>`;
+  if (isKyp && records.length > 0) {
+    toolbar += `<div class="view-toggle" style="margin-left:auto">
+      <button class="vtbtn${kypView==='list'?' active':''}" onclick="setKypView('list')">List</button>
+      <button class="vtbtn${kypView==='cards'?' active':''}" onclick="setKypView('cards')">Cards</button>
+    </div>`;
+  }
+  toolbar += `<div style="${(!isKyp||records.length===0)?'margin-left:auto':''}">
+    <button class="btn btn-primary btn-md" onclick="addRecord('${tab}')">+ Add ${singular}</button>
+  </div></div>`;
+
+  if (records.length === 0) {
+    return toolbar + `<div class="empty">
+      <div class="empty-icon">◎</div>
+      <div class="empty-text">No ${singular}s yet</div>
+      <button class="btn btn-primary btn-md" onclick="addRecord('${tab}')">+ Add ${singular}</button>
+    </div>`;
+  }
+
+  if (isKyp && kypView === 'cards') {
+    const cards = records.map(r => renderKYPCard(r, true)).join('');
+    return toolbar + `<div class="kyp-grid">${cards}</div>`;
+  }
+
+  const items = records.map(r => {
+    const meta = getMeta(tab, r);
+    return `<div class="record-card" onclick="editRecord('${tab}','${r.id}')">
+      <div class="record-card-body">
+        <div class="record-card-name">${esc(getTitle(tab,r))}</div>
+        <div class="record-card-sub">${esc(r.date)}</div>
+      </div>
+      <div class="record-card-actions">
+        ${meta ? badge(meta) : ''}
+        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteRecord('${tab}','${r.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return toolbar + `<div class="record-list">${items}</div>`;
+}
+
+// ─── KYP CARD ─────────────────────────────────────────────────────────────────
+function renderKYPCard(r, withEdit=false) {
+  const activeBadges = ALL_BADGES.filter(b => r.badges.includes(b.key));
+  const bullets = (r.bullets||[]).filter(b=>b.trim());
+  const avatarInner = r.imageUrl
+    ? `<img src="${esc(r.imageUrl)}" alt="${esc(r.name)}" onerror="this.style.display='none'">`
+    : esc(r.number||'?');
+
+  const editBar = withEdit ? `<div class="kyp-card-edit-bar">
+    <button class="btn btn-default btn-sm" onclick="editRecord('kyps','${r.id}')">Edit</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteRecord('kyps','${r.id}')">✕</button>
+  </div>` : '';
+
+  const bulletsHtml = bullets.length ? `<div class="kyp-body">${
+    bullets.map(b=>`<div class="kyp-bullet"><span class="kyp-bullet-dot">•</span><span class="kyp-bullet-text">${esc(b)}</span></div>`).join('')
+  }</div>` : '';
+
+  const attrHtml = activeBadges.length ? `<div class="kyp-attr-badges">${
+    activeBadges.map(b=>`<div class="attr-badge"><span>${b.icon}</span><span>${b.label}</span></div>`).join('')
+  }</div>` : '';
+
+  return `<div class="kyp-card">
+    ${editBar}
+    <div class="kyp-card-header">
+      <div class="kyp-avatar">${avatarInner}</div>
+      <div>
+        <div class="kyp-player-name">${esc(r.name)||'—'}</div>
+        <div class="kyp-badges-row">
+          ${r.number?badge('#'+r.number):''}
+          ${r.position?badge(r.position,true):''}
+          ${r.height?`<span style="font-size:12px;color:var(--muted)">${esc(r.height)}</span>`:''}
+        </div>
+      </div>
+    </div>
+    ${bulletsHtml}
+    ${attrHtml}
+  </div>`;
+}
+
+// ─── FORM VIEWS ───────────────────────────────────────────────────────────────
+function renderForm(tab, r) {
+  const singular = getSingular(tab);
+  const isNew = !DB[tab].find(x=>x.id===r.id);
+  const header = `<div class="form-header">
+    <button class="btn btn-ghost btn-md" onclick="cancelEdit()">← Back</button>
+    <span class="form-title">${isNew?'New':'Edit'} ${singular}</span>
+    <div class="form-actions">
+      <button class="btn btn-default btn-md" onclick="cancelEdit()">Cancel</button>
+      <button class="btn btn-primary btn-md" onclick="saveRecord()">Save Record</button>
+    </div>
+  </div>`;
+
+  let body = '';
+  if (tab==='coaches')   body = formCoach(r);
+  if (tab==='teams')     body = formTeam(r);
+  if (tab==='players')   body = formPlayer(r);
+  if (tab==='playbooks') body = formPlaybook(r);
+  if (tab==='reports')   body = formReport(r);
+  if (tab==='kyps')      body = formKYP(r);
+
+  return header + body + `<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+    <button class="btn btn-default btn-md" onclick="cancelEdit()">Cancel</button>
+    <button class="btn btn-primary btn-md" onclick="saveRecord()">Save Record</button>
+  </div>`;
+}
+
+// ── COACH FORM ─────────────────────────────────────────────────────────────────
+function formCoach(r) {
+  return `
+    ${grid2(fieldInput('Coach Name','name',r.name), fieldInput('Team','team',r.team))}
+    ${section('Trends & Styles',
+      field('Lineup','lineup',r.lineup,4,'Preferred lineups, rotation patterns, situational lineups') +
+      field('ATO (After Timeout)','ato',r.ato,4,'Go-to plays coming out of timeouts') +
+      field('Popular Decoys','decoys',r.decoys,3,'Actions used to draw attention before the real action')
+    )}`;
+}
+
+// ── TEAM FORM ──────────────────────────────────────────────────────────────────
+function formTeam(r) {
+  return `
+    ${grid2(fieldInput('Team Name','name',r.name), fieldInput('League / Conference','league',r.league))}
+    ${fieldInput('Season','season',r.season,'e.g. 2024-25')}
+    ${section('Offense — Running Lines & Transition',
+      subsection('Running Lines',
+        grid2(field('Corners','corners',r.corners,3),field('Overload','overload',r.overload,3)) +
+        grid2(field('Trailer','trailer',r.trailer,3),field('Early Options','earlyOptions',r.earlyOptions,3))
+      ) +
+      subsection('Transition',
+        field('What is the trigger?','trigger',r.trigger,3) +
+        field('Flow types','flowTypes',r.flowTypes,3) +
+        field('Secondary options','secondaryOptions',r.secondaryOptions,3) +
+        field('How can we deactivate primary & secondary options?','deactivate',r.deactivate,3)
+      ) +
+      subsection('Half-Court Spacing',
+        grid2(field('5 Out','fiveOut',r.fiveOut,2),field('Horns','horns',r.horns,2)) +
+        grid2(field('Chin','chin',r.chin,2),field('Others','othersHC',r.othersHC,2))
+      ) +
+      subsection('BOB / SOB',
+        field('What can we change if we deny the entry?','denyEntry',r.denyEntry,3) +
+        field('What are the options in specific situations?','specificSituations',r.specificSituations,3)
+      ) +
+      subsection('Low Post',
+        grid2(field('Strong side','strongSide',r.strongSide,2),field('Weakside','weakSideLP',r.weakSideLP,2))
+      ) +
+      subsection('PNR Offense',
+        field('Against different on-ball coverages','onBallCov',r.onBallCov,3) +
+        field('Against different off-ball coverages','offBallCov',r.offBallCov,3) +
+        grid2(field('Time','pnrTime',r.pnrTime,2),field('Location','pnrLocation',r.pnrLocation,2)) +
+        field('Situation','pnrSituation',r.pnrSituation,3)
+      )
+    )}
+    ${section('Defense',
+      subsection('After Defensive Rebound',
+        grid2(field('Do they pick up early?','pickUpEarly',r.pickUpEarly,2),field('Direction?','direction',r.direction,2)) +
+        field('Who is the safety?','safety',r.safety,2)
+      ) +
+      subsection('PNR Defense',
+        grid2(field('Standard coverage?','standardCov',r.standardCov,2),field('Standard tags?','standardTags',r.standardTags,2)) +
+        field('Do they dig/stunt?','digStunt',r.digStunt,2) +
+        grid2(field('Coverage timing','covTiming',r.covTiming,2),field('Coverage place','covPlace',r.covPlace,2))
+      ) +
+      subsection('Low Post Defense',
+        grid2(field('Do they double?','doDouble',r.doDouble,2),field('Do they dig?','doDig',r.doDig,2)) +
+        grid2(field('Do they force?','doForce',r.doForce,2),field('What if a mismatch?','mismatch',r.mismatch,2)) +
+        field('Weakside behaviors','weakSideBeh',r.weakSideBeh,2)
+      ) +
+      subsection('Weakside Defense',
+        grid2(field('Help lines?','helpLines',r.helpLines,2),field('Do they switch?','doSwitch',r.doSwitch,2))
+      ) +
+      subsection('BOB/SOB Defense',
+        grid2(field('Inbounder defense?','inbounderDef',r.inbounderDef,2),field('Zone','zoneBOB',r.zoneBOB,2))
+      ) +
+      subsection('Zone Defense',
+        grid2(field('When?','zoneWhen',r.zoneWhen,2),field('What type?','zoneType',r.zoneType,2))
+      ) +
+      subsection('Special Situations',
+        grid2(field('Press','press',r.press,2),field('Double team','doubleTeam',r.doubleTeam,2))
+      ), 'blue'
+    )}
+    ${section('Culture',
+      field('How aggressive are they?','aggressive',r.aggressive,3) +
+      field('How do they play when down or up?','upDown',r.upDown,3) +
+      field('How do they react to a fanbase?','fanbase',r.fanbase,3) +
+      field('How do they come from the locker room or timeouts?','lockerRoom',r.lockerRoom,3) +
+      grid2(field('Which players are the triggers?','triggers',r.triggers,2),field('What wakes them up? Technical fouls?','wakesUp',r.wakesUp,2))
+    )}`;
+}
+
+// ── PLAYER FORM ────────────────────────────────────────────────────────────────
+function formPlayer(r) {
+  const posPicker = `<div class="field"><label>Position</label><div class="pos-picker">${
+    POSITIONS.map(p=>`<button class="pos-btn${r.position===p?' active':''}" data-pos="${p}" onclick="setPosition('${p}')">${p}</button>`).join('')
+  }</div></div>`;
+
+  return `
+    ${grid2(fieldInput('Player Name','name',r.name), fieldInput('Team','team',r.team))}
+    ${grid2(fieldInput('Jersey #','number',r.number,'#'), posPicker)}
+    ${section('Offense — Hand Domination',
+      grid2(field('Strong hand','strongHand',r.strongHand,2),field('Location','handLocation',r.handLocation,2)) +
+      field('How does the player act dribbling?','dribbling',r.dribbling,3) +
+      field('How does the player act with shoulder turn?','shoulderTurn',r.shoulderTurn,3) +
+      field('Can player skip or hammer pass with both hands?','skipHammer',r.skipHammer,2)
+    )}
+    ${section('Offense — Shooting Skills',
+      grid2(field('Form','form',r.form,2),field('Color (hot/cold tendencies)','color',r.color,2)) +
+      grid2(field('Type','shootType',r.shootType,2),field('Location','shootLocation',r.shootLocation,2))
+    )}
+    ${section('Offense — PNR',
+      grid2(field('Where / Dominant side','pnrWhere',r.pnrWhere,2),field('How they handle certain coverages?','pnrCoverages',r.pnrCoverages,2)) +
+      field('Special','pnrSpecial',r.pnrSpecial,2) +
+      grid2(field('Can big make critical decisions off short roll?','bigShortRoll',r.bigShortRoll,2),field('Is the player a decision maker?','decisionMaker',r.decisionMaker,2)) +
+      field('What can we risk?','canRisk',r.canRisk,2)
+    )}
+    ${section('Offense — Special',
+      grid2(field('Pin down / Face cut','pinDown',r.pinDown,2),field('Are they a rim runner?','rimRunner',r.rimRunner,2)) +
+      grid2(field('Backdoor cuts an option?','backdoor',r.backdoor,2),field('Stretch 4/5','stretch45',r.stretch45,2)) +
+      grid2(field('Guard who can post up?','guardPost',r.guardPost,2),field('High volume?','highVolume',r.highVolume,2))
+    )}
+    ${section('Defense — Open Court',
+      grid2(field('Are they a rim runner on defense?','rimRunnerDef',r.rimRunnerDef,2),field('Can the player defend 94ft?','defend94',r.defend94,2)), 'blue'
+    )}
+    ${section('Defense — Ball Screen',
+      grid2(field('Can the player switch?','canSwitch',r.canSwitch,2),field('Does the player have to switch back?','switchBack',r.switchBack,2)) +
+      grid2(field('Recovery time after on-ball coverages','recoveryOnBall',r.recoveryOnBall,2),field('Recovery time after off-ball coverages','recoveryOffBall',r.recoveryOffBall,2)), 'blue'
+    )}
+    ${section('Defense — Rim',
+      grid2(field('Is the player a shot blocker?','shotBlocker',r.shotBlocker,2),field('Can the player take charges?','charges',r.charges,2)) +
+      grid2(field('Is a guard grabbing defensive rebounds?','guardReb',r.guardReb,2),field('Are they an offensive rebounding threat?','offRebThreat',r.offRebThreat,2)), 'blue'
+    )}
+    ${section('Defense — Off Ball',
+      grid2(field('Can they bump and recover?','bumpRecover',r.bumpRecover,2),field('Can they trail and deny?','trailDeny',r.trailDeny,2)) +
+      field('Can they force backdoor and contain?','forceBackdoor',r.forceBackdoor,2), 'blue'
+    )}
+    ${section('Physicality',
+      grid2(field('Height','height',r.height,2),field('Wingspan','wingspan',r.wingspan,2)) +
+      grid2(field('Athleticism','athleticism',r.athleticism,2),field('Strength & conditioning','strengthCond',r.strengthCond,2))
+    )}
+    ${section('Personality',
+      grid2(field('On-ball aggressiveness','onBallAgg',r.onBallAgg,2),field('Off-ball aggressiveness','offBallAgg',r.offBallAgg,2)) +
+      grid2(field('Up/down situations','upDown',r.upDown,2),field('Frustration after bad decisions / fouls','frustration',r.frustration,2)) +
+      grid2(field('Late game situations','lateGame',r.lateGame,2),field('Leadership / Controlling skills','leadership',r.leadership,2))
+    )}`;
+}
+
+// ── PLAYBOOK FORM ──────────────────────────────────────────────────────────────
+function formPlaybook(r) {
+  return `
+    ${grid2(fieldInput('Playbook Name','name',r.name), fieldInput('Team','team',r.team))}
+    ${section('Signals & Play Calls',
+      field('Hand signals and playcalls','handSignals',r.handSignals,4,'Describe hand signals, codes, and verbal playcalls observed')
+    )}
+    ${section('Play Names',
+      field('How do they call?','howTheyCall',r.howTheyCall,3) +
+      field('How do we call?','howWeCall',r.howWeCall,3)
+    )}
+    ${section('Play Series Classification',
+      field('Classify plays based on spacing','bySpacing',r.bySpacing,4) +
+      field('Classify plays based on entry','byEntry',r.byEntry,4) +
+      field('Classify plays based on actions','byAction',r.byAction,4)
+    )}`;
+}
+
+// ── REPORT FORM ────────────────────────────────────────────────────────────────
+function formReport(r) {
+  return `
+    ${grid2(fieldInput('Report Title','name',r.name), fieldInput('Opponent','opponent',r.opponent))}
+    ${section('Hot Plays & Advantages',
+      field('Hot plays — how to defend and how to gain advantage','hotPlays',r.hotPlays,6)
+    )}
+    ${section('Significant Defensive Notes',
+      field('Key defensive observations','defNotes',r.defNotes,5), 'blue'
+    )}
+    ${section('Depth Chart',
+      field('Starters','starter',r.starter,3,'Starting lineup by position') +
+      field('Primary backups','primaryBackup',r.primaryBackup,3) +
+      field('Secondary backups','secondaryBackup',r.secondaryBackup,3)
+    )}
+    ${section('Major Contributors',
+      field('Tendencies','majorTendencies',r.majorTendencies,4) +
+      field('Keys','majorKeys',r.majorKeys,4)
+    )}
+    ${section('Other Contributors',
+      field('Contributors','contributors',r.contributors,3) +
+      field('Minor contributors','minorContributors',r.minorContributors,3)
+    )}`;
+}
+
+// ── KYP FORM ───────────────────────────────────────────────────────────────────
+function formKYP(r) {
+  const posPicker = `<div class="field"><label>Position</label><div class="pos-picker">${
+    POSITIONS.map(p=>`<button class="pos-btn${r.position===p?' active':''}" data-pos="${p}" onclick="setPosition('${p}')">${p}</button>`).join('')
+  }</div></div>`;
+
+  const bulletFields = r.bullets.map((b,i)=>
+    `<div class="bullet-row"><span class="bullet-dot">•</span><input class="bullet-input" type="text" value="${esc(b)}" placeholder="Note ${i+1}" oninput="updateBullet(${i},this.value)"></div>`
+  ).join('');
+
+  const badgePicker = ALL_BADGES.map(b=>
+    `<button class="badge-pick-btn${r.badges.includes(b.key)?' active':''}" data-badge="${b.key}" onclick="toggleBadge('${b.key}')">${b.icon} ${b.label}</button>`
+  ).join('');
+
+  return `
+    ${grid2(fieldInput('Player Name','name',r.name), fieldInput('Team','team',r.team))}
+    ${grid2(fieldInput('Jersey #','number',r.number,'#'), posPicker)}
+    ${fieldInput('Height','height',r.height,'e.g. 6\'8"')}
+    <div class="field"><label>Image URL (optional)</label><input type="url" value="${esc(r.imageUrl)}" placeholder="https://..." oninput="updateEdit('imageUrl',this.value)"></div>
+    <div class="field">
+      <label>Scout Notes (up to 5 bullet points)</label>
+      ${bulletFields}
+    </div>
+    <div class="field">
+      <label>Attribute Badges</label>
+      <div class="badge-picker">${badgePicker}</div>
+    </div>
+    ${section('Live Preview', renderKYPCard(r))}`;
+}
+
+// ─── BOOT ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
