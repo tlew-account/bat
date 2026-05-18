@@ -630,6 +630,14 @@
   }
   .back-btn:hover { color: var(--navy); }
 
+  /* Edit-entry modal compact stats */
+  #em-cats .cat-block { margin-bottom: 10px; }
+  #em-cats .stat-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  #em-cats .stat-input-item input { font-size: 14px; padding: 6px 9px; }
+
+  /* Entry table action cell */
+  .entry-actions { display: flex; gap: 4px; justify-content: flex-end; }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -847,6 +855,48 @@
   </div>
 </div>
 
+<!-- Edit Entry Modal -->
+<div class="modal-overlay" id="modal-entry">
+  <div class="modal" style="max-width:580px;">
+    <button class="modal-close" onclick="closeModal('modal-entry')"><i class="fa-solid fa-xmark"></i></button>
+    <div class="modal-title">Edit Entry</div>
+
+    <div class="form-row" style="margin-bottom:14px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Player</label>
+        <select class="form-control" id="em-player"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Team</label>
+        <select class="form-control" id="em-team"></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Date</label>
+        <input type="date" class="form-control" id="em-date">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label>Opponent</label>
+        <input type="text" class="form-control" id="em-opponent" placeholder="Opponent name…">
+      </div>
+    </div>
+
+    <div id="em-cats"></div>
+
+    <div style="background:linear-gradient(90deg,var(--navy),var(--navy2));border-radius:10px;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <span style="color:rgba(255,255,255,0.65);font-size:13px;font-weight:600;">Aggregate Score</span>
+      <span id="em-score-display" style="font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:800;color:var(--gold);">0</span>
+    </div>
+
+    <div class="modal-footer" style="justify-content:space-between;">
+      <button class="btn btn-red btn-sm" onclick="deleteEntry()" style="gap:6px;"><i class="fa-solid fa-trash"></i> Delete Entry</button>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" onclick="closeModal('modal-entry')">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEditEntry()"><i class="fa-solid fa-circle-check"></i> Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="toast"></div>
 
@@ -959,6 +1009,7 @@ let editingPlayer = null;
 let editingTeam = null;
 let editingCat = null;
 let editingStat = null; // {catId, stat|null}
+let editingEntryId = null;
 let selectedPlayerColor = COLORS[0];
 let selectedTeamColor = COLORS[0];
 let selectedCatColor = COLORS[0];
@@ -1094,7 +1145,7 @@ function renderDashboard() {
   if (entries.length) {
     const recent = entries.slice().reverse().slice(0,8);
     document.getElementById('dash-recent').innerHTML = `<table class="entry-table">
-      <thead><tr><th>Date</th><th>Player</th><th>Team</th><th>Opponent</th><th style="text-align:right">Score</th></tr></thead>
+      <thead><tr><th>Date</th><th>Player</th><th>Team</th><th>Opponent</th><th style="text-align:right">Score</th><th></th></tr></thead>
       <tbody>${recent.map(e => {
         const p = players.find(x=>x.id===e.playerId);
         const t = teams.find(x=>x.id===e.teamId);
@@ -1104,6 +1155,9 @@ function renderDashboard() {
           <td>${t?.name||'—'}</td>
           <td>${e.opponent||'—'}</td>
           <td style="text-align:right"><span class="entry-score">${computeScore(e.statValues)}</span></td>
+          <td><div class="entry-actions">
+            <button class="btn-icon" title="Edit entry" onclick="openEditEntryModal('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+          </div></td>
         </tr>`;
       }).join('')}</tbody>
     </table>`;
@@ -1169,6 +1223,7 @@ function submitEntry() {
     if (el) sv[s.id] = parseFloat(el.value)||0;
   }));
   entries.push({ id:genId(), playerId, teamId, date, opponent, statValues: sv });
+  markDirty();
   showToast('Entry logged successfully!');
   renderLog();
 }
@@ -1227,6 +1282,9 @@ function openPlayerProfile(pid) {
     <td>${teams.find(t=>t.id===e.teamId)?.name||'—'}</td>
     <td>${e.opponent||'—'}</td>
     <td style="text-align:right"><span class="entry-score">${computeScore(e.statValues)}</span></td>
+    <td><div class="entry-actions">
+      <button class="btn-icon" title="Edit entry" onclick="openEditEntryModal('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+    </div></td>
   </tr>`).join('');
 
   document.getElementById('player-profile-content').innerHTML = `
@@ -1249,7 +1307,7 @@ function openPlayerProfile(pid) {
     ${catStats}
     ${pe.length ? `<div class="card" style="margin-top:12px;"><div class="card-body">
       <div class="section-head"><h3>Entry Log</h3></div>
-      <table class="entry-table"><thead><tr><th>Date</th><th>Team</th><th>Opponent</th><th style="text-align:right">Score</th></tr></thead>
+      <table class="entry-table"><thead><tr><th>Date</th><th>Team</th><th>Opponent</th><th style="text-align:right">Score</th><th></th></tr></thead>
       <tbody>${entryRows}</tbody></table></div></div>` : ''}
   `;
   showPage('player-profile');
@@ -1315,6 +1373,19 @@ function openTeamProfile(tid) {
       </div>
     </div>`).join('');
 
+  const teamEntryRows = te.slice().reverse().map(e => {
+    const p = players.find(x=>x.id===e.playerId);
+    return `<tr>
+      <td>${fmt(e.date)}</td>
+      <td><div style="display:flex;align-items:center;gap:7px;">${p?avatar(p.name,p.color,22):''}${p?.name||'—'}</div></td>
+      <td>${e.opponent||'—'}</td>
+      <td style="text-align:right"><span class="entry-score">${computeScore(e.statValues)}</span></td>
+      <td><div class="entry-actions">
+        <button class="btn-icon" title="Edit entry" onclick="openEditEntryModal('${e.id}')"><i class="fa-solid fa-pen"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
   document.getElementById('team-profile-content').innerHTML = `
     <div class="profile-header" style="border-left:4px solid ${t.color};">
       <div style="width:54px;height:54px;background:${t.color}22;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1338,6 +1409,13 @@ function openTeamProfile(tid) {
       ${roster.length ? rosterRows : '<div class="empty" style="padding:18px 0"><p>No players on this team</p></div>'}
     </div></div>
     ${catStats}
+    ${te.length ? `<div class="card" style="margin-top:4px;"><div class="card-body">
+      <div class="section-head"><h3>Entry Log</h3></div>
+      <table class="entry-table">
+        <thead><tr><th>Date</th><th>Player</th><th>Opponent</th><th style="text-align:right">Score</th><th></th></tr></thead>
+        <tbody>${teamEntryRows}</tbody>
+      </table>
+    </div></div>` : ''}
   `;
   showPage('team-profile');
   document.querySelector('nav button[data-page="teams"]').classList.add('active');
@@ -1528,6 +1606,99 @@ function saveStat() {
   closeModal('modal-stat');
   renderCategories();
   showToast(stat ? 'Stat updated' : 'Stat added');
+}
+
+// ── Entry Edit Modal ──
+function openEditEntryModal(eid) {
+  const entry = entries.find(e => e.id === eid);
+  if (!entry) return;
+  editingEntryId = eid;
+
+  // Populate header fields
+  document.getElementById('em-player').innerHTML =
+    '<option value="">Select player…</option>' +
+    players.map(p => `<option value="${p.id}" ${p.id === entry.playerId ? 'selected' : ''}>${p.name}</option>`).join('');
+  document.getElementById('em-team').innerHTML =
+    '<option value="">Select team…</option>' +
+    teams.map(t => `<option value="${t.id}" ${t.id === entry.teamId ? 'selected' : ''}>${t.name}</option>`).join('');
+  document.getElementById('em-date').value = entry.date;
+  document.getElementById('em-opponent').value = entry.opponent || '';
+
+  // Build stat inputs pre-filled with saved values
+  document.getElementById('em-cats').innerHTML = categories.map(cat => `
+    <div class="cat-block" style="border-left-color:${cat.color};">
+      <div class="cat-block-header">
+        <div class="cat-block-title" style="color:${cat.color};">${cat.name}</div>
+      </div>
+      <div class="cat-block-stats">
+        <div class="stat-grid">
+          ${cat.stats.map(s => `
+            <div class="stat-input-item">
+              <label>${s.name} <span>×${s.value} pts</span></label>
+              <input type="number" min="0" id="em-stat-${s.id}"
+                value="${entry.statValues[s.id] ?? 0}"
+                oninput="updateEditScore()">
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`).join('');
+
+  updateEditScore();
+  openModal('modal-entry');
+}
+
+function updateEditScore() {
+  const sv = {};
+  categories.forEach(c => c.stats.forEach(s => {
+    const el = document.getElementById('em-stat-' + s.id);
+    if (el) sv[s.id] = el.value;
+  }));
+  document.getElementById('em-score-display').textContent = computeScore(sv);
+}
+
+function saveEditEntry() {
+  const playerId = document.getElementById('em-player').value;
+  const teamId   = document.getElementById('em-team').value;
+  const date     = document.getElementById('em-date').value;
+  const opponent = document.getElementById('em-opponent').value.trim();
+  if (!playerId) return showToast('Please select a player');
+  if (!teamId)   return showToast('Please select a team');
+
+  const sv = {};
+  categories.forEach(c => c.stats.forEach(s => {
+    const el = document.getElementById('em-stat-' + s.id);
+    if (el) sv[s.id] = parseFloat(el.value) || 0;
+  }));
+
+  entries = entries.map(e =>
+    e.id === editingEntryId
+      ? { ...e, playerId, teamId, date, opponent, statValues: sv }
+      : e
+  );
+
+  closeModal('modal-entry');
+  markDirty();
+  showToast('Entry updated');
+  // Refresh whichever page is currently visible
+  const active = document.querySelector('.page.active');
+  if (active?.id === 'page-dashboard') renderDashboard();
+  if (active?.id === 'page-player-profile') openPlayerProfile(playerId);
+  if (active?.id === 'page-team-profile')   openTeamProfile(teamId);
+}
+
+function deleteEntry() {
+  if (!confirm('Permanently delete this entry?')) return;
+  const entry = entries.find(e => e.id === editingEntryId);
+  const savedPlayerId = entry?.playerId;
+  const savedTeamId   = entry?.teamId;
+  entries = entries.filter(e => e.id !== editingEntryId);
+  closeModal('modal-entry');
+  markDirty();
+  showToast('Entry deleted');
+  const active = document.querySelector('.page.active');
+  if (active?.id === 'page-dashboard') renderDashboard();
+  if (active?.id === 'page-player-profile' && savedPlayerId) openPlayerProfile(savedPlayerId);
+  if (active?.id === 'page-team-profile'   && savedTeamId)   openTeamProfile(savedTeamId);
 }
 
 // ═══════════════════════════════════════════════════════
