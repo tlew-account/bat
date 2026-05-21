@@ -1,1 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Principles of Play</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --court-dark: #0a0f14;
+  --court-mid: #111820;
+  --court-surface: #161f28;
+  --court-panel: #1c2730;
+  --court-line: #243040;
+  --accent-gold: #e8b84b;
+  --accent-gold-dim: #a07c2a;
+  --accent-gold-light: #f5d482;
+  --accent-off: #e05a2b;
+  --accent-def: #3a8fbf;
+  --accent-trans: #52b788;
+  --accent-half: #9b72cf;
+  --text-primary: #e8edf2;
+  --text-secondary: #8a9db0;
+  --text-muted: #4a5f72;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--court-dark);
+  color:var(--text-primary);
+  font-family:'DM Sans',sans-serif;
+  font-size:14px;
+  line-height:1.6;
+  min-height:100vh;
+}
 
+/* ── HEADER ── */
+.site-header{
+  background:var(--court-mid);
+  border-bottom:1px solid var(--border);
+  padding:0 32px;
+  display:flex;align-items:center;gap:20px;height:64px;
+  position:sticky;top:0;z-index:100;
+}
+.logo{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px;letter-spacing:3px;
+  color:var(--accent-gold);line-height:1;
+}
+.logo span{color:var(--text-secondary);font-size:13px;letter-spacing:2px;display:block;font-family:'DM Sans',sans-serif;font-weight:400;margin-top:1px}
+.header-line{flex:1;height:1px;background:var(--border)}
+.header-actions{display:flex;gap:8px}
+.btn-add-cat{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(232,184,75,0.1);border:1px solid rgba(232,184,75,0.3);
+  color:var(--accent-gold);border-radius:var(--radius);padding:7px 14px;
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .2s;
+}
+.btn-add-cat:hover{background:rgba(232,184,75,0.2);border-color:rgba(232,184,75,0.5)}
+.btn-add-cat svg{width:14px;height:14px}
+
+/* ── LAYOUT ── */
+.app-wrap{display:flex;min-height:calc(100vh - 64px)}
+
+/* ── SIDEBAR NAV ── */
+.sidebar{
+  width:240px;flex-shrink:0;
+  background:var(--court-mid);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  position:sticky;top:64px;height:calc(100vh - 64px);
+  overflow-y:auto;
+}
+.nav-section{margin-bottom:4px}
+.nav-category-btn{
+  width:100%;display:flex;align-items:center;gap:10px;
+  padding:8px 20px;background:none;border:none;cursor:pointer;
+  text-align:left;color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:12px;
+  font-weight:600;letter-spacing:2px;text-transform:uppercase;transition:color .2s;
+}
+.nav-category-btn:hover{color:var(--text-primary)}
+.nav-category-btn.active{color:var(--accent-gold)}
+.nav-category-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.nav-sub-btn{
+  width:100%;display:flex;align-items:center;gap:8px;
+  padding:6px 20px 6px 38px;background:none;border:none;cursor:pointer;
+  text-align:left;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;
+  transition:color .2s,background .2s;border-left:2px solid transparent;
+}
+.nav-sub-btn:hover{color:var(--text-primary);background:rgba(255,255,255,0.03)}
+.nav-sub-btn.active{color:var(--text-primary);border-left-color:var(--accent-gold);background:rgba(232,184,75,0.05);padding-left:36px}
+.nav-divider{height:1px;background:var(--border);margin:12px 20px}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;padding:32px;max-width:900px}
+
+/* ── OVERVIEW ── */
+.overview-card{
+  background:var(--court-surface);
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:24px;margin-bottom:28px;
+}
+.overview-label{
+  font-family:'Bebas Neue',sans-serif;letter-spacing:3px;font-size:11px;
+  color:var(--accent-gold);margin-bottom:10px;
+}
+.overview-title{
+  font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:2px;
+  color:var(--text-primary);line-height:1;margin-bottom:14px;
+}
+.overview-textarea{
+  width:100%;min-height:90px;background:transparent;border:none;outline:none;
+  color:var(--text-secondary);font-family:'DM Sans',sans-serif;
+  font-size:14px;line-height:1.75;resize:vertical;
+}
+.overview-textarea::placeholder{color:var(--text-muted)}
+
+/* ── CATEGORY + SUB ── */
+.category-block{margin-bottom:36px}
+.cat-header{
+  display:flex;align-items:center;gap:0;margin-bottom:16px;
+  position:relative;
+}
+.cat-color-bar{width:4px;height:42px;border-radius:2px;flex-shrink:0}
+.cat-title-wrap{flex:1;background:var(--court-panel);border:1px solid var(--border);border-left:none;padding:8px 16px;display:flex;align-items:center;gap:10px}
+.cat-title-input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:2px;
+  color:var(--text-primary);
+}
+.cat-title-input::placeholder{color:var(--text-muted)}
+.cat-actions{display:flex;gap:6px;margin-left:auto}
+.icon-btn{
+  background:none;border:1px solid transparent;border-radius:var(--radius);padding:5px 8px;
+  cursor:pointer;color:var(--text-muted);display:flex;align-items:center;
+  transition:all .2s;font-size:13px;
+}
+.icon-btn:hover{color:var(--text-primary);border-color:var(--border-hover);background:rgba(255,255,255,0.04)}
+.icon-btn.danger:hover{color:#e05a5a;border-color:rgba(224,90,90,0.3)}
+.icon-btn svg{width:15px;height:15px}
+
+/* Sub-category */
+.sub-list{display:flex;flex-direction:column;gap:12px;padding-left:16px}
+.sub-block{
+  background:var(--court-surface);border:1px solid var(--border);
+  border-radius:var(--radius-lg);overflow:hidden;
+  transition:border-color .2s;
+}
+.sub-block:hover{border-color:var(--border-hover)}
+.sub-head{
+  display:flex;align-items:center;gap:0;cursor:pointer;
+}
+.sub-color-strip{width:3px;flex-shrink:0;align-self:stretch}
+.sub-head-inner{flex:1;display:flex;align-items:center;gap:10px;padding:11px 14px}
+.sub-num{
+  font-family:'DM Mono',monospace;font-size:10px;color:var(--text-muted);
+  background:var(--court-panel);border:1px solid var(--border);border-radius:3px;padding:2px 6px;flex-shrink:0;
+}
+.sub-name-input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;
+  color:var(--text-primary);
+}
+.sub-name-input::placeholder{color:var(--text-muted)}
+.sub-toggle{
+  background:none;border:none;cursor:pointer;color:var(--text-muted);
+  padding:4px 10px;display:flex;align-items:center;transition:color .2s;
+}
+.sub-toggle:hover{color:var(--text-primary)}
+.sub-toggle svg{width:16px;height:16px;transition:transform .22s}
+.sub-toggle.open svg{transform:rotate(180deg)}
+
+.sub-body{display:none;border-top:1px solid var(--border);padding:18px 18px 20px 20px}
+.sub-body.open{display:block}
+
+/* ── PRINCIPLE ITEMS ── */
+.principles-list{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.principle-row{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--court-panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 12px;
+  transition:border-color .2s;
+}
+.principle-row:focus-within{border-color:rgba(232,184,75,0.3)}
+.principle-bullet{
+  width:6px;height:6px;border-radius:50%;background:var(--accent-gold);
+  margin-top:8px;flex-shrink:0;
+}
+.principle-input{
+  flex:1;background:none;border:none;outline:none;
+  color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;resize:none;
+  min-height:22px;
+}
+.principle-input::placeholder{color:var(--text-muted)}
+
+/* Notes */
+.field-label{
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:2px;
+  text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.field-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.notes-area{
+  width:100%;min-height:60px;background:var(--court-panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:9px 12px;color:var(--text-secondary);
+  font-family:'DM Sans',sans-serif;font-size:13px;line-height:1.65;resize:vertical;outline:none;
+  transition:border-color .2s;margin-bottom:14px;
+}
+.notes-area:focus{border-color:rgba(232,184,75,0.3)}
+.notes-area::placeholder{color:var(--text-muted)}
+
+/* Links */
+.links-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.link-row{display:flex;align-items:center;gap:8px}
+.link-icon{color:var(--accent-gold-dim);flex-shrink:0;display:flex}
+.link-icon svg{width:13px;height:13px}
+.link-input{
+  flex:1;background:var(--court-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:6px 10px;color:var(--accent-gold-light);font-family:'DM Mono',monospace;font-size:12px;
+  outline:none;transition:border-color .2s;
+}
+.link-input:focus{border-color:rgba(232,184,75,0.4)}
+.link-input::placeholder{color:var(--text-muted)}
+.link-open{
+  background:none;border:none;cursor:pointer;color:var(--text-muted);padding:5px;
+  border-radius:var(--radius);display:flex;align-items:center;transition:color .2s;
+}
+.link-open:hover{color:var(--accent-gold)}
+.link-open svg{width:12px;height:12px}
+
+/* Add buttons */
+.add-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  background:none;border:1px dashed var(--border);border-radius:var(--radius);
+  padding:5px 12px;color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;
+  cursor:pointer;transition:all .2s;
+}
+.add-btn:hover{border-color:var(--accent-gold-dim);color:var(--accent-gold)}
+.add-btn svg{width:11px;height:11px}
+
+/* Add sub-category */
+.add-sub-wrap{margin-top:8px;padding-left:16px}
+.add-sub-btn{
+  width:100%;display:flex;align-items:center;gap:10px;
+  background:none;border:1px dashed var(--border);border-radius:var(--radius-lg);padding:11px 16px;
+  color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:13px;
+  cursor:pointer;transition:all .2s;
+}
+.add-sub-btn:hover{border-color:var(--border-hover);color:var(--text-secondary);background:rgba(255,255,255,0.02)}
+.add-sub-btn svg{width:14px;height:14px}
+
+/* Themes bar */
+.themes-bar{
+  background:var(--court-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:10px 14px;margin-top:14px;
+}
+.themes-bar-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase}
+.themes-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.theme-chip{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(232,184,75,0.08);border:1px solid rgba(232,184,75,0.2);
+  border-radius:20px;padding:4px 10px;
+}
+.theme-chip input{
+  background:none;border:none;outline:none;
+  color:var(--accent-gold-light);font-family:'DM Sans',sans-serif;font-size:12px;min-width:70px;
+}
+.theme-chip input::placeholder{color:var(--accent-gold-dim)}
+.theme-del{background:none;border:none;cursor:pointer;color:var(--accent-gold-dim);font-size:13px;line-height:1;transition:color .2s;padding:0}
+.theme-del:hover{color:var(--accent-gold)}
+.add-theme-btn{
+  background:rgba(255,255,255,0.04);border:1px dashed rgba(232,184,75,0.2);
+  border-radius:20px;padding:4px 10px;color:var(--accent-gold-dim);
+  font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;
+  display:flex;align-items:center;gap:4px;transition:all .2s;
+}
+.add-theme-btn:hover{background:rgba(232,184,75,0.1);color:var(--accent-gold)}
+
+/* Save bar */
+.save-bar{
+  position:fixed;bottom:20px;right:24px;
+  display:flex;gap:8px;z-index:200;align-items:center;
+}
+.save-status{
+  background:var(--court-panel);border:1px solid var(--border);border-radius:var(--radius);
+  padding:8px 14px;font-size:12px;color:var(--text-muted);
+}
+.save-status.saved{color:var(--accent-trans);border-color:rgba(82,183,136,0.3)}
+.save-btn{
+  background:var(--accent-gold);color:var(--court-dark);border:none;border-radius:var(--radius);
+  padding:9px 22px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;
+  cursor:pointer;transition:all .2s;
+}
+.save-btn:hover{background:var(--accent-gold-light)}
+
+/* New category modal */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;
+  align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--court-panel);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:28px;width:400px;max-width:95vw;
+}
+.modal h3{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:var(--text-primary);margin-bottom:6px}
+.modal p{font-size:13px;color:var(--text-muted);margin-bottom:20px}
+.modal label{display:block;font-size:12px;color:var(--text-secondary);margin-bottom:6px}
+.modal input[type=text]{
+  width:100%;background:var(--court-surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:9px 12px;color:var(--text-primary);font-family:'DM Sans',sans-serif;font-size:14px;
+  outline:none;margin-bottom:16px;transition:border-color .2s;
+}
+.modal input[type=text]:focus{border-color:rgba(232,184,75,0.4)}
+.color-picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.color-swatch{
+  width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .2s;
+}
+.color-swatch.selected{border-color:#fff;transform:scale(1.15)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+.btn-cancel{
+  background:none;border:1px solid var(--border);border-radius:var(--radius);padding:8px 18px;
+  color:var(--text-secondary);font-family:'DM Sans',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;
+}
+.btn-cancel:hover{border-color:var(--border-hover);color:var(--text-primary)}
+.btn-confirm{
+  background:var(--accent-gold);color:var(--court-dark);border:none;border-radius:var(--radius);
+  padding:8px 18px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
+}
+.btn-confirm:hover{background:var(--accent-gold-light)}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="logo">
+    Principles<span>of play</span>
+  </div>
+  <div class="header-line"></div>
+  <div class="header-actions">
+    <button class="btn-add-cat" onclick="openAddCategoryModal()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Add Category
+    </button>
+  </div>
+</header>
+
+<div class="app-wrap">
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar"></nav>
+
+  <!-- MAIN -->
+  <main class="main" id="main-content"></main>
+</div>
+
+<!-- SAVE BAR -->
+<div class="save-bar">
+  <div class="save-status" id="save-status">Auto-saved</div>
+  <button class="save-btn" onclick="saveData()">Save</button>
+</div>
+
+<!-- ADD CATEGORY MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>New Category</h3>
+    <p>Add a high-level category like Offense, Defense, or Mental Fitness.</p>
+    <label>Category name</label>
+    <input type="text" id="modal-name" placeholder="e.g. Mental Fitness" onkeydown="if(event.key==='Enter')confirmAddCategory()">
+    <label>Color accent</label>
+    <div class="color-picker-row" id="color-picker"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmAddCategory()">Add Category</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════
+//  DEFAULT DATA
+// ═══════════════════════════
+const COLORS = [
+  '#e05a2b','#3a8fbf','#52b788','#9b72cf','#e8b84b',
+  '#e05a7a','#5abfe0','#88b352','#bf7a3a','#7ab3e0'
+];
+
+const DEFAULT_STATE = {
+  overview: `These are the foundational concepts that drive how we play — offense, defense, and everything in between. They are not plays. They are principles: shared mental models that let every player make good decisions in real time.`,
+  categories: [
+    {
+      id: 'offense', name: 'OFFENSE', color: '#e05a2b',
+      themes: ['Create advantages', 'React lag-free', 'Score or make the defense pay'],
+      subcategories: [
+        {
+          id: 'trans-off', name: 'Transition Offense',
+          notes: 'Press for an advantage immediately. If neutralized, flow to a trigger. If triggers fail, rely on coverage solutions.',
+          open: true,
+          themes: [],
+          principles: [
+            'Lag-free reaction — win the first 3 steps. BOLT immediately after a change of possession.',
+            'Land like a quarterback — if you get a rebound, face upcourt and be ready to scan.',
+            'Bust out dribble — if you rebound it and there\'s space, GO.',
+            'Kick-ahead passes — hunt advantages created by pace.',
+            'Keep the highway clear — no one clogs the middle unless they are finishing a 1-on-0.',
+            'Two-side break — two players wide on the same side creates skip pass angles. First fills the corner, second at the 45.',
+            'Clapback — try to score within 5 seconds of being scored on.',
+          ],
+          links: [
+            'https://youtu.be/H24ahXJ01O0',
+            'https://youtube.com/shorts/u6b4bZOsOsc',
+            'https://youtube.com/shorts/PtibK5Q58VY',
+          ]
+        },
+        {
+          id: 'halfcourt-off', name: 'Half-Court Offense',
+          notes: 'Attack to score first, then make a play. Not attack to make a play. The floor is lava — if you are open, shoot. If you can\'t shoot, drive. If you can\'t drive, pass.',
+          open: false,
+          themes: [],
+          principles: [
+            'Shoot, drive, or pass — in that order of priority.',
+            'Make contact on drives in straight lines. No banana drives.',
+            'Two feet in the paint — commit on your drives.',
+            'Draw two and pass to where the help came from.',
+            'Triggers not set plays — use Pick & Roll, Get action, and Pistol as triggers.',
+            'Shot selection: Gold = layups / free throws / inside RA. Silver = catch-and-shoot 3PT. Bronze = off-the-dribble 3PT.',
+          ],
+          links: ['https://youtu.be/Z0OxSGY7d1U']
+        }
+      ]
+    },
+    {
+      id: 'defense', name: 'DEFENSE', color: '#3a8fbf',
+      themes: ['Force bad shots', 'Rotate early', 'Disrupt everything'],
+      subcategories: [
+        {
+          id: 'trans-def', name: 'Transition Defense',
+          notes: 'The opposite of transition offense. Stop the advantage before it becomes a domino.',
+          open: true,
+          themes: [],
+          principles: [
+            'TAGGING — the opposite of bursting in offense. Tag the trailer and the rim runner.',
+            'Sprint back and find your matchup — optimal matchups on every possession.',
+            'Stop the ball first — get in the path of the dribble penetrator.',
+            'No layups — the one non-negotiable.',
+          ],
+          links: []
+        },
+        {
+          id: 'halfcourt-def', name: 'Half-Court Defense',
+          notes: 'For offense the goal is a good shot. For defense the goal is to force a bad shot. Know every offensive trigger and disrupt it.',
+          open: false,
+          themes: [],
+          principles: [
+            'Lock left / Force left — dictate the direction of the ball.',
+            'Help off the ball — be in position to rotate before the pass arrives.',
+            'KYP (Know Your Personnel) — guard each player based on their tendencies.',
+            'Disrupt triggers — recognize Pick & Roll, Get, and Pistol and disrupt at the start.',
+            'Coverage for two-person actions — pre-plan your coverage scheme.',
+            'Coverage for three- and four-person actions — rotate and help off the weak side.',
+            'Ways to foul and special situations — use fouls strategically.',
+          ],
+          links: []
+        }
+      ]
+    }
+  ]
+};
+
+// ═══════════════════════════
+//  STATE
+// ═══════════════════════════
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+let selectedCategoryId = 'offense';
+let selectedSubId = null;
+let saveTimer = null;
+
+// ═══════════════════════════
+//  LOAD / SAVE
+// ═══════════════════════════
+function loadData() {
+  try {
+    const raw = localStorage.getItem('pop_v1');
+    if (raw) state = JSON.parse(raw);
+  } catch(e) {}
+  if (!state.categories) state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+}
+
+function saveData() {
+  try {
+    localStorage.setItem('pop_v1', JSON.stringify(state));
+    const el = document.getElementById('save-status');
+    el.textContent = '✓ Saved'; el.className = 'save-status saved';
+    setTimeout(() => { el.textContent = 'Auto-saved'; el.className = 'save-status'; }, 2000);
+  } catch(e) {}
+}
+
+function markUnsaved() {
+  const el = document.getElementById('save-status');
+  el.textContent = 'Unsaved'; el.className = 'save-status';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveData, 2000);
+}
+
+// ═══════════════════════════
+//  HELPERS
+// ═══════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2,9);
+}
+
+function getCat(catId) {
+  return state.categories.find(c => c.id === catId);
+}
+
+function getSub(catId, subId) {
+  const cat = getCat(catId);
+  return cat ? cat.subcategories.find(s => s.id === subId) : null;
+}
+
+// ═══════════════════════════
+//  SIDEBAR
+// ═══════════════════════════
+function renderSidebar() {
+  const nav = document.getElementById('sidebar');
+  nav.innerHTML = '';
+  state.categories.forEach(cat => {
+    const sec = document.createElement('div');
+    sec.className = 'nav-section';
+    const isCatActive = selectedCategoryId === cat.id;
+    sec.innerHTML = `<button class="nav-category-btn ${isCatActive?'active':''}" onclick="selectCategory('${cat.id}')">
+      <span class="nav-category-dot" style="background:${cat.color}"></span>
+      ${esc(cat.name)}
+    </button>`;
+    (cat.subcategories || []).forEach(sub => {
+      const isSubActive = selectedSubId === sub.id && selectedCategoryId === cat.id;
+      const btn = document.createElement('button');
+      btn.className = `nav-sub-btn ${isSubActive?'active':''}`;
+      btn.textContent = sub.name || 'Untitled';
+      btn.onclick = () => selectSub(cat.id, sub.id);
+      sec.appendChild(btn);
+    });
+    nav.appendChild(sec);
+
+    const div = document.createElement('div');
+    div.className = 'nav-divider';
+    nav.appendChild(div);
+  });
+}
+
+function selectCategory(catId) {
+  selectedCategoryId = catId;
+  selectedSubId = null;
+  renderAll();
+}
+
+function selectSub(catId, subId) {
+  selectedCategoryId = catId;
+  selectedSubId = subId;
+  renderAll();
+  setTimeout(() => {
+    const el = document.getElementById('sub-block-' + subId);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 100);
+}
+
+// ═══════════════════════════
+//  MAIN RENDER
+// ═══════════════════════════
+function renderMain() {
+  const main = document.getElementById('main-content');
+  main.innerHTML = '';
+
+  // Overview always at top
+  const ov = document.createElement('div');
+  ov.className = 'overview-card';
+  ov.innerHTML = `
+    <div class="overview-label">FOUNDATION</div>
+    <div class="overview-title">Overview</div>
+    <textarea class="overview-textarea" placeholder="Describe the foundational philosophy of play..." oninput="state.overview=this.value;markUnsaved()">${esc(state.overview||'')}</textarea>
+  `;
+  main.appendChild(ov);
+
+  // Render each category
+  state.categories.forEach(cat => {
+    const block = renderCategoryBlock(cat);
+    main.appendChild(block);
+  });
+}
+
+function renderCategoryBlock(cat) {
+  const block = document.createElement('div');
+  block.className = 'category-block';
+  block.id = 'cat-block-' + cat.id;
+
+  block.innerHTML = `
+    <div class="cat-header">
+      <div class="cat-color-bar" style="background:${cat.color}"></div>
+      <div class="cat-title-wrap">
+        <input class="cat-title-input" value="${esc(cat.name||'')}" placeholder="Category name..."
+          oninput="getCat('${cat.id}').name=this.value;markUnsaved();renderSidebar()">
+        <div class="cat-actions">
+          <button class="icon-btn" title="Change color" onclick="promptColorChange('${cat.id}')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <button class="icon-btn danger" title="Delete category" onclick="deleteCat('${cat.id}')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="sub-list" id="sub-list-${cat.id}"></div>
+    <div class="add-sub-wrap">
+      <button class="add-sub-btn" onclick="addSubcategory('${cat.id}')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add subcategory
+      </button>
+    </div>
+  `;
+
+  const subList = block.querySelector('#sub-list-' + cat.id);
+  (cat.subcategories || []).forEach((sub, i) => {
+    const subEl = renderSubBlock(cat, sub, i);
+    subList.appendChild(subEl);
+  });
+
+  return block;
+}
+
+function renderSubBlock(cat, sub, idx) {
+  const block = document.createElement('div');
+  block.className = 'sub-block';
+  block.id = 'sub-block-' + sub.id;
+
+  const isOpen = sub.open !== false;
+
+  block.innerHTML = `
+    <div class="sub-head" onclick="toggleSub('${cat.id}','${sub.id}',this)">
+      <div class="sub-color-strip" style="background:${cat.color}66"></div>
+      <div class="sub-head-inner">
+        <span class="sub-num">${String(idx+1).padStart(2,'0')}</span>
+        <input class="sub-name-input" value="${esc(sub.name||'')}" placeholder="Subcategory name..."
+          onclick="event.stopPropagation()" oninput="getSub('${cat.id}','${sub.id}').name=this.value;markUnsaved();renderSidebar()">
+      </div>
+      <button class="icon-btn danger" style="margin-right:4px" onclick="event.stopPropagation();deleteSub('${cat.id}','${sub.id}')" title="Delete">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <button class="sub-toggle ${isOpen?'open':''}" onclick="event.stopPropagation();toggleSub('${cat.id}','${sub.id}',this.closest('.sub-head'))">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+    </div>
+    <div class="sub-body ${isOpen?'open':''}" id="sub-body-${sub.id}">
+      <div class="field-label" style="margin-bottom:10px">Notes / Context</div>
+      <textarea class="notes-area" placeholder="Coaching context for this subcategory..."
+        oninput="getSub('${cat.id}','${sub.id}').notes=this.value;markUnsaved()">${esc(sub.notes||'')}</textarea>
+
+      <div class="field-label">Principles</div>
+      <div class="principles-list" id="principles-${sub.id}"></div>
+      <button class="add-btn" onclick="addPrinciple('${cat.id}','${sub.id}')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add principle
+      </button>
+
+      <div class="field-label" style="margin-top:16px">Links & Resources</div>
+      <div class="links-list" id="links-${sub.id}"></div>
+      <button class="add-btn" onclick="addLink('${cat.id}','${sub.id}')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add link
+      </button>
+
+      <div class="themes-bar" style="margin-top:16px">
+        <div class="themes-bar-label">Themes</div>
+        <div class="themes-chips" id="themes-${sub.id}"></div>
+      </div>
+    </div>
+  `;
+
+  // Render principles
+  renderPrinciples(sub);
+
+  // Render links
+  renderLinks(sub, cat.id);
+
+  // Render themes
+  renderThemes(sub, cat.id);
+
+  return block;
+}
+
+function renderPrinciples(sub) {
+  const list = document.getElementById('principles-' + sub.id);
+  if (!list) return;
+  list.innerHTML = '';
+  (sub.principles || []).forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'principle-row';
+    row.innerHTML = `
+      <span class="principle-bullet"></span>
+      <textarea class="principle-input" rows="1" placeholder="Add a principle..."
+        oninput="sub_principle_change(this,'${sub.id}',${i});autoResize(this)">${esc(p)}</textarea>
+      <button class="icon-btn danger" style="padding:3px 6px" onclick="deletePrinciple('${sub.id}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    `;
+    list.appendChild(row);
+    const ta = row.querySelector('textarea');
+    autoResize(ta);
+  });
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function renderLinks(sub, catId) {
+  const list = document.getElementById('links-' + sub.id);
+  if (!list) return;
+  list.innerHTML = '';
+  (sub.links || []).forEach((lk, i) => {
+    const row = document.createElement('div');
+    row.className = 'link-row';
+    row.innerHTML = `
+      <span class="link-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+      </svg></span>
+      <input class="link-input" placeholder="Paste URL..." value="${esc(lk)}"
+        oninput="link_change(this,'${catId}','${sub.id}',${i})">
+      <button class="link-open" onclick="openLink('${catId}','${sub.id}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      </button>
+      <button class="icon-btn danger" style="padding:3px 6px" onclick="deleteLink('${catId}','${sub.id}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    `;
+    list.appendChild(row);
+  });
+}
+
+function renderThemes(sub, catId) {
+  const chips = document.getElementById('themes-' + sub.id);
+  if (!chips) return;
+  chips.innerHTML = '';
+  (sub.themes || []).forEach((t, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'theme-chip';
+    chip.innerHTML = `<input placeholder="Theme..." value="${esc(t)}" oninput="theme_change(this,'${catId}','${sub.id}',${i})">
+      <button class="theme-del" onclick="deleteTheme('${catId}','${sub.id}',${i})">✕</button>`;
+    chips.appendChild(chip);
+  });
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-theme-btn';
+  addBtn.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Theme`;
+  addBtn.onclick = () => { getSub(catId, sub.id).themes = getSub(catId, sub.id).themes||[]; getSub(catId, sub.id).themes.push(''); renderThemes(getSub(catId, sub.id), catId); markUnsaved(); };
+  chips.appendChild(addBtn);
+}
+
+// ═══════════════════════════
+//  TOGGLE
+// ═══════════════════════════
+function toggleSub(catId, subId, headEl) {
+  const body = document.getElementById('sub-body-' + subId);
+  const tog = headEl.querySelector('.sub-toggle');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  if (tog) tog.classList.toggle('open', !isOpen);
+  const sub = getSub(catId, subId);
+  if (sub) { sub.open = !isOpen; markUnsaved(); }
+}
+
+// ═══════════════════════════
+//  MUTATIONS
+// ═══════════════════════════
+function sub_principle_change(el, subId, i) {
+  state.categories.forEach(cat => {
+    const sub = cat.subcategories.find(s => s.id === subId);
+    if (sub) { sub.principles[i] = el.value; markUnsaved(); }
+  });
+}
+function addPrinciple(catId, subId) {
+  const sub = getSub(catId, subId);
+  if (!sub) return;
+  sub.principles = sub.principles || [];
+  sub.principles.push('');
+  renderPrinciples(sub);
+  markUnsaved();
+}
+function deletePrinciple(subId, i) {
+  state.categories.forEach(cat => {
+    const sub = cat.subcategories.find(s => s.id === subId);
+    if (sub) { sub.principles.splice(i, 1); renderPrinciples(sub); markUnsaved(); }
+  });
+}
+function link_change(el, catId, subId, i) {
+  const sub = getSub(catId, subId);
+  if (sub) { sub.links[i] = el.value; markUnsaved(); }
+}
+function addLink(catId, subId) {
+  const sub = getSub(catId, subId);
+  if (!sub) return;
+  sub.links = sub.links || [];
+  sub.links.push('');
+  renderLinks(sub, catId);
+  markUnsaved();
+}
+function deleteLink(catId, subId, i) {
+  const sub = getSub(catId, subId);
+  if (!sub) return;
+  sub.links.splice(i, 1);
+  renderLinks(sub, catId);
+  markUnsaved();
+}
+function openLink(catId, subId, i) {
+  const sub = getSub(catId, subId);
+  if (!sub) return;
+  let u = sub.links[i]; if (!u) return;
+  if (!u.startsWith('http')) u = 'https://' + u;
+  window.open(u, '_blank');
+}
+function theme_change(el, catId, subId, i) {
+  const sub = getSub(catId, subId);
+  if (sub) { sub.themes[i] = el.value; markUnsaved(); }
+}
+function deleteTheme(catId, subId, i) {
+  const sub = getSub(catId, subId);
+  if (!sub) return;
+  sub.themes.splice(i, 1);
+  renderThemes(sub, catId);
+  markUnsaved();
+}
+
+function addSubcategory(catId) {
+  const cat = getCat(catId);
+  if (!cat) return;
+  cat.subcategories = cat.subcategories || [];
+  cat.subcategories.push({ id: uid(), name: '', notes: '', principles: [], links: [], themes: [], open: true });
+  renderAll();
+  markUnsaved();
+}
+
+function deleteSub(catId, subId) {
+  const cat = getCat(catId);
+  if (!cat) return;
+  cat.subcategories = cat.subcategories.filter(s => s.id !== subId);
+  renderAll();
+  markUnsaved();
+}
+
+function deleteCat(catId) {
+  if (!confirm('Delete this category and all its content?')) return;
+  state.categories = state.categories.filter(c => c.id !== catId);
+  if (selectedCategoryId === catId) { selectedCategoryId = state.categories[0]?.id || null; selectedSubId = null; }
+  renderAll();
+  markUnsaved();
+}
+
+// ═══════════════════════════
+//  COLOR CHANGE
+// ═══════════════════════════
+function promptColorChange(catId) {
+  const cat = getCat(catId);
+  if (!cat) return;
+  const color = prompt('Enter a hex color (e.g. #e05a2b):', cat.color);
+  if (color && color.startsWith('#')) {
+    cat.color = color;
+    renderAll();
+    markUnsaved();
+  }
+}
+
+// ═══════════════════════════
+//  ADD CATEGORY MODAL
+// ═══════════════════════════
+let selectedNewColor = COLORS[0];
+
+function openAddCategoryModal() {
+  selectedNewColor = COLORS[Math.floor(Math.random() * COLORS.length)];
+  document.getElementById('modal-name').value = '';
+  const picker = document.getElementById('color-picker');
+  picker.innerHTML = '';
+  COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'color-swatch' + (c === selectedNewColor ? ' selected' : '');
+    sw.style.background = c;
+    sw.onclick = () => {
+      selectedNewColor = c;
+      picker.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      sw.classList.add('selected');
+    };
+    picker.appendChild(sw);
+  });
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('modal-name').focus(), 100);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function confirmAddCategory() {
+  const name = document.getElementById('modal-name').value.trim();
+  if (!name) return;
+  state.categories.push({
+    id: uid(),
+    name: name.toUpperCase(),
+    color: selectedNewColor,
+    themes: [],
+    subcategories: [{ id: uid(), name: '', notes: '', principles: [], links: [], themes: [], open: true }]
+  });
+  closeModal();
+  renderAll();
+  markUnsaved();
+}
+
+// ═══════════════════════════
+//  RENDER ALL
+// ═══════════════════════════
+function renderAll() {
+  renderSidebar();
+  renderMain();
+}
+
+// ═══════════════════════════
+//  INIT
+// ═══════════════════════════
+loadData();
+renderAll();
+</script>
+</body>
+</html>
