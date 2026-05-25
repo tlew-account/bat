@@ -2275,7 +2275,8 @@ let entries    = saved?.entries    ?? [];
 let formulas   = saved?.formulas   ?? JSON.parse(JSON.stringify(DEFAULT_FORMULAS));
 
 // Migrate: ensure every formula has a stable outputId (needed for dataset references)
-formulas = formulas.map(f => f.outputId ? f : { ...f, outputId: 'fml_' + genId() });
+// Note: genId() is declared later, so we inline the same logic here
+formulas = formulas.map(f => f.outputId ? f : { ...f, outputId: 'fml_' + Math.random().toString(36).slice(2, 9) });
 
 // Migrate old single teamId → teamIds array
 players = players.map(p => {
@@ -3046,8 +3047,9 @@ document.querySelectorAll('.modal-overlay').forEach(o => {
   o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
 });
 
-function buildColorPicker(containerId, selectedColor, onSelect) {
+function buildColorPicker(containerId, selectedColor) {
   const el = document.getElementById(containerId);
+  if (!el) return;
   el.innerHTML = COLORS.map(c => `
     <div class="color-swatch ${c===selectedColor?'selected':''}" style="background:${c};" onclick="selectColor('${containerId}','${c}')"></div>
   `).join('');
@@ -3738,15 +3740,6 @@ function saveFormula() {
   showToast(editingFormula ? 'Formula updated' : 'Formula added');
 }
 
-// Override buildColorPicker to also handle formula colors
-function buildColorPicker(containerId, selectedColor) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = COLORS.map(c => `
-    <div class="color-swatch ${c===selectedColor?'selected':''}" style="background:${c};"
-      onclick="selectColor('${containerId}','${c}')"></div>
-  `).join('');
-}
 // ═══════════════════════════════════════════════════════
 function exportCSV(entryList, title) {
   const allStats = categories.flatMap(c => c.stats.map(s=>({...s, catName:c.name})));
