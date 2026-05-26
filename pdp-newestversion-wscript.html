@@ -1,0 +1,2867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Player Development Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Supabase for CourtIQ sync -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"><\/script>
+<!-- jsPDF for PDF export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- docx for Word export -->
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
+<style>
+  :root {
+    --magic-blue: #0077C0;
+    --magic-blue-dark: #005A94;
+    --magic-blue-deep: #004070;
+    --magic-blue-light: #e8f4fc;
+    --magic-blue-tint: #f0f8ff;
+    --silver: #C4CED4;
+    --silver-dark: #9AABB3;
+    --silver-light: #e8edf0;
+    --silver-xlight: #f4f6f8;
+    --magic-black: #06192A;
+    --magic-black-mid: #1a2d3d;
+    --bg: #f5f7f9;
+    --surface: #ffffff;
+    --surface2: #f8fafb;
+    --border: #dde3e8;
+    --border2: #c8d2d8;
+    --text: #06192A;
+    --text-mid: #2d4a5f;
+    --text-muted: #6b8494;
+    --text-dim: #9ab0bc;
+    --shadow-sm: 0 1px 3px rgba(0,119,192,0.08), 0 1px 2px rgba(6,25,42,0.04);
+    --shadow: 0 4px 16px rgba(0,119,192,0.10), 0 2px 6px rgba(6,25,42,0.06);
+    --shadow-lg: 0 8px 32px rgba(0,119,192,0.14), 0 4px 12px rgba(6,25,42,0.08);
+    --radius: 10px;
+    --radius-lg: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(0,119,192,0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 100%, rgba(0,90,148,0.04) 0%, transparent 50%);
+  }
+
+  .top-bar {
+    height: 5px;
+    background: linear-gradient(90deg, var(--magic-black) 0%, var(--magic-blue) 40%, var(--magic-blue) 70%, var(--silver) 100%);
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: linear-gradient(135deg, var(--magic-black) 0%, var(--magic-black-mid) 60%, var(--magic-blue-deep) 100%);
+    padding: 36px 44px 32px;
+    display: flex; align-items: center; gap: 36px;
+    position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 90% 50%, rgba(0,119,192,0.25) 0%, transparent 60%),
+      radial-gradient(ellipse at 10% 100%, rgba(196,206,212,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .header::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,119,192,0.6), transparent);
+  }
+  .header-deco {
+    position: absolute; right: 44px; top: 50%; transform: translateY(-50%);
+    width: 110px; height: 110px; opacity: 0.07; pointer-events: none;
+  }
+
+  .player-photo-wrap { position: relative; flex-shrink: 0; z-index: 1; }
+  .player-photo {
+    width: 116px; height: 116px; border-radius: 50%; object-fit: cover;
+    border: 3px solid var(--magic-blue);
+    box-shadow: 0 0 0 2px rgba(0,119,192,0.3), var(--shadow-lg);
+    display: block; cursor: pointer; background: var(--magic-black-mid);
+  }
+  .player-photo-placeholder {
+    width: 116px; height: 116px; border-radius: 50%;
+    border: 2px dashed rgba(196,206,212,0.4);
+    background: rgba(255,255,255,0.05);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 5px; cursor: pointer;
+    color: rgba(196,206,212,0.5); font-size: 11px; text-align: center;
+    transition: border-color .2s, color .2s;
+  }
+  .player-photo-placeholder:hover { border-color: var(--magic-blue); color: var(--magic-blue); }
+  .player-photo-placeholder svg { width: 30px; height: 30px; }
+  #photo-input { display: none; }
+
+  .header-info { flex: 1; z-index: 1; }
+  .header-eyebrow {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 500; letter-spacing: 4px;
+    text-transform: uppercase; color: var(--magic-blue); margin-bottom: 6px;
+  }
+  .player-name {
+    font-family: 'Oswald', sans-serif;
+    font-size: 46px; font-weight: 700; letter-spacing: -0.5px; text-transform: uppercase;
+    color: #fff; background: transparent; border: none; outline: none;
+    width: 100%; line-height: 1.05;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .player-name::placeholder { color: rgba(255,255,255,0.2); }
+
+  .header-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .meta-field {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(196,206,212,0.2);
+    border-radius: 8px; padding: 7px 14px;
+  }
+  .meta-field label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 9px; font-weight: 500; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--silver-dark); white-space: nowrap;
+  }
+  .meta-field input {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; min-width: 90px;
+  }
+  .meta-field input::placeholder { color: rgba(255,255,255,0.25); }
+
+  /* ── EXPORT BAR ── */
+  .export-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 44px;
+    display: flex; align-items: center; gap: 10px;
+    box-shadow: var(--shadow-sm);
+  }
+  .export-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-right: 4px; white-space: nowrap;
+  }
+  .export-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    border: 1.5px solid var(--border2);
+    border-radius: 8px; padding: 7px 14px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all .2s; text-decoration: none;
+    background: var(--surface2);
+  }
+  .export-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .export-btn.pdf { color: #c0392b; border-color: #e0b0aa; }
+  .export-btn.pdf:hover { background: #fdf0ee; border-color: #c0392b; box-shadow: var(--shadow-sm); }
+  .export-btn.word { color: #1a5296; border-color: #aac0e0; }
+  .export-btn.word:hover { background: #eef3fd; border-color: #1a5296; box-shadow: var(--shadow-sm); }
+  .export-btn.gdoc { color: #1a6b3c; border-color: #a0cfb4; }
+  .export-btn.gdoc:hover { background: #edf7f2; border-color: #1a6b3c; box-shadow: var(--shadow-sm); }
+  .export-sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+
+  /* ── MAIN ── */
+  .main { max-width: 980px; margin: 0 auto; padding: 36px 24px 110px; }
+
+  .section { margin-bottom: 36px; }
+  .section-header { display: flex; align-items: center; gap: 0; margin-bottom: 18px; }
+  .section-badge {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 4px 0 0 4px; flex-shrink: 0;
+  }
+  .badge-intro, .badge-team { background: var(--magic-blue); color: #fff; }
+  .badge-skill { background: var(--magic-blue-dark); color: #fff; }
+  .badge-iq    { background: var(--silver-dark); color: #fff; }
+  .badge-analytics { background: var(--magic-black); color: #fff; }
+
+  .section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 26px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--magic-black);
+    background: var(--silver-xlight); border: 1px solid var(--silver); border-left: none;
+    padding: 3px 18px 3px 16px; border-radius: 0 4px 4px 0;
+  }
+
+  /* ── INTRO ── */
+  .intro-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px;
+    box-shadow: var(--shadow-sm); border-top: 3px solid var(--magic-blue);
+  }
+  .intro-textarea {
+    width: 100%; min-height: 130px; background: transparent; border: none; outline: none;
+    color: var(--text-mid); font-family: 'Source Sans 3', sans-serif;
+    font-size: 15px; line-height: 1.75; resize: vertical;
+  }
+  .intro-textarea::placeholder { color: var(--text-dim); }
+
+  /* ── VITAMIN CARD ── */
+  .vitamin-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 10px;
+    box-shadow: var(--shadow-sm); transition: box-shadow .2s, border-color .2s;
+  }
+  .vitamin-card:hover { box-shadow: var(--shadow); }
+  .vitamin-card.team-card:focus-within { border-color: var(--magic-blue); box-shadow: 0 0 0 3px rgba(0,119,192,0.08), var(--shadow); }
+  .vitamin-card.skill-card:focus-within { border-color: var(--magic-blue-dark); box-shadow: 0 0 0 3px rgba(0,90,148,0.08), var(--shadow); }
+  .vitamin-card.iq-card:focus-within { border-color: var(--silver-dark); box-shadow: 0 0 0 3px rgba(154,171,179,0.15), var(--shadow); }
+
+  .vitamin-head { display: flex; align-items: stretch; cursor: pointer; user-select: none; background: var(--surface2); }
+  .vitamin-color-bar { width: 4px; flex-shrink: 0; }
+  .team-bar { background: var(--magic-blue); }
+  .skill-bar { background: var(--magic-blue-dark); }
+  .iq-bar { background: var(--silver-dark); }
+
+  .vitamin-head-inner { flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .vitamin-num {
+    font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 500; letter-spacing: 1px;
+    color: var(--text-dim); flex-shrink: 0; background: var(--silver-xlight);
+    border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px;
+  }
+  .vitamin-name-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 600;
+    color: var(--magic-black); text-transform: uppercase; letter-spacing: .5px;
+  }
+  .vitamin-name-input::placeholder { color: var(--text-dim); font-weight: 400; }
+
+  .vitamin-toggle {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); padding: 4px 10px; transition: color .2s; display: flex; align-items: center;
+  }
+  .vitamin-toggle:hover { color: var(--magic-blue); }
+  .vitamin-toggle svg { width: 18px; height: 18px; transition: transform .25s; }
+  .vitamin-toggle.open svg { transform: rotate(180deg); }
+
+  .delete-item-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); padding: 4px 8px; border-radius: 6px;
+    transition: color .2s, background .2s; display: flex; align-items: center;
+  }
+  .delete-item-btn:hover { color: #c0392b; background: rgba(192,57,43,0.08); }
+  .delete-item-btn svg { width: 15px; height: 15px; }
+
+  .vitamin-body { display: none; padding: 18px 20px 20px 24px; border-top: 1px solid var(--border); }
+  .vitamin-body.open { display: block; }
+
+  .vit-notes {
+    width: 100%; min-height: 72px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; color: var(--text-mid); font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; line-height: 1.65; resize: vertical; outline: none;
+    transition: border-color .2s; margin-bottom: 16px;
+  }
+  .vit-notes:focus { border-color: var(--magic-blue); box-shadow: 0 0 0 3px rgba(0,119,192,0.08); }
+  .vit-notes::placeholder { color: var(--text-dim); }
+
+  .field-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px; font-weight: 500; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .field-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .subitem-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .subitem-bullet { color: var(--magic-blue); font-size: 20px; line-height: 1; flex-shrink: 0; font-weight: 700; }
+  .subitem-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 12px; color: var(--text-mid);
+    font-family: 'Source Sans 3', sans-serif; font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  .subitem-input:focus { border-color: var(--magic-blue); }
+  .subitem-input::placeholder { color: var(--text-dim); }
+
+  .link-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .link-icon { flex-shrink: 0; color: var(--magic-blue); display: flex; }
+  .link-icon svg { width: 15px; height: 15px; }
+
+  /* ── SUB-ITEM EXPANDED BLOCK ── */
+  .subitem-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .subitem-block-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: var(--silver-xlight);
+    border-bottom: 1px solid var(--border);
+  }
+  .subitem-block-body {
+    padding: 12px 14px 14px;
+  }
+  .sub-notes {
+    width: 100%; min-height: 60px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 12px;
+    color: var(--text-mid); font-family: 'Source Sans 3', sans-serif;
+    font-size: 13px; line-height: 1.6; resize: vertical;
+    outline: none; transition: border-color .2s;
+    margin-bottom: 10px;
+  }
+  .sub-notes:focus { border-color: var(--magic-blue); }
+  .sub-notes::placeholder { color: var(--text-dim); }
+  .sub-field-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 9px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+  }
+  .sub-field-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .link-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 12px; color: var(--magic-blue-dark);
+    font-family: 'Source Sans 3', sans-serif; font-size: 13px; outline: none; transition: border-color .2s;
+  }
+  .link-input:focus { border-color: var(--magic-blue); }
+  .link-input::placeholder { color: var(--text-dim); }
+  .link-open {
+    background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 5px;
+    border-radius: 6px; display: flex; align-items: center; transition: color .2s, background .2s;
+  }
+  .link-open:hover { color: var(--magic-blue); background: var(--magic-blue-light); }
+  .link-open svg { width: 14px; height: 14px; }
+
+  .add-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: none; border: 1px dashed var(--border2); border-radius: 7px; padding: 6px 13px;
+    color: var(--text-muted); font-family: 'Source Sans 3', sans-serif; font-size: 13px; cursor: pointer;
+    transition: border-color .2s, color .2s, background .2s; margin-top: 4px;
+  }
+  .add-btn:hover { border-color: var(--magic-blue); color: var(--magic-blue); background: var(--magic-blue-light); }
+  .add-btn svg { width: 13px; height: 13px; }
+
+  .add-vitamin-wrap { margin-top: 6px; }
+  .add-vitamin-btn {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-lg); padding: 14px 20px;
+    color: var(--text-muted); font-family: 'Oswald', sans-serif;
+    font-size: 15px; font-weight: 500; letter-spacing: 1.5px; text-transform: uppercase;
+    cursor: pointer; width: 100%;
+    transition: border-color .2s, color .2s, background .2s, box-shadow .2s;
+    box-shadow: var(--shadow-sm);
+  }
+  .add-vitamin-btn:hover { border-color: var(--magic-blue); color: var(--magic-blue); background: var(--magic-blue-light); box-shadow: var(--shadow); }
+  .add-vitamin-btn svg { width: 18px; height: 18px; }
+  .add-vitamin-btn .limit-note { margin-left: auto; font-size: 12px; letter-spacing: 0; text-transform: none; font-family: 'Source Sans 3', sans-serif; color: var(--text-dim); }
+
+  /* ── THEMES ── */
+  .themes-wrap {
+    margin-top: 18px; background: var(--magic-blue); border-radius: var(--radius);
+    padding: 16px 18px; position: relative; overflow: hidden;
+  }
+  .themes-wrap::before {
+    content: ''; position: absolute; top: 0; right: 0; width: 150px; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05)); pointer-events: none;
+  }
+  .themes-title {
+    font-family: 'Oswald', sans-serif; font-size: 9px; font-weight: 600; letter-spacing: 3px;
+    text-transform: uppercase; color: rgba(255,255,255,0.55); margin-bottom: 10px;
+  }
+  .themes-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .theme-chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px; padding: 5px 12px;
+  }
+  .theme-chip input {
+    background: transparent; border: none; outline: none;
+    color: #fff; font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-weight: 500; min-width: 80px;
+  }
+  .theme-chip input::placeholder { color: rgba(255,255,255,0.4); }
+  .theme-del { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.45); padding: 0; display: flex; font-size: 14px; line-height: 1; transition: color .2s; }
+  .theme-del:hover { color: #fff; }
+  .add-theme-btn {
+    background: rgba(255,255,255,0.1); border: 1px dashed rgba(255,255,255,0.3);
+    border-radius: 20px; padding: 5px 12px; color: rgba(255,255,255,0.6);
+    font-family: 'Source Sans 3', sans-serif; font-size: 13px; cursor: pointer;
+    display: flex; align-items: center; gap: 5px; transition: background .2s, color .2s;
+  }
+  .add-theme-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+
+
+
+  /* ── COURTIQ TOP BAR ── */
+  .ciq-top-bar {
+    background: #0d1b2a;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 28px; gap: 16px; flex-wrap: wrap;
+    position: sticky; top: 0; z-index: 300;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+  }
+  .ciq-top-left { display: flex; align-items: center; gap: 16px; }
+  .ciq-top-logo {
+    font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 800;
+    color: #fff; letter-spacing: 1.5px; flex-shrink: 0;
+  }
+  .ciq-top-logo span { color: #e83a3a; }
+  .ciq-top-status {
+    display: flex; align-items: center; gap: 7px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 12px;
+    color: rgba(255,255,255,0.45); font-weight: 500;
+  }
+  .ciq-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(255,255,255,0.2); flex-shrink: 0; transition: background .3s;
+  }
+  .ciq-dot.connected { background: #4caf82; box-shadow: 0 0 6px rgba(76,175,130,0.6); }
+  .ciq-dot.syncing   { background: #f5a623; animation: ciqPulse .8s infinite; }
+  .ciq-dot.error     { background: #e83a3a; }
+  @keyframes ciqPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+  .ciq-top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ciq-top-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.8); padding: 7px 14px; border-radius: 7px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .18s; white-space: nowrap;
+  }
+  .ciq-top-btn:hover { background: rgba(255,255,255,0.18); color: #fff; border-color: rgba(255,255,255,0.35); }
+  .ciq-top-btn.loading { opacity: .55; pointer-events: none; }
+  .ciq-top-btn-primary {
+    background: #0077C0; border-color: #0077C0; color: #fff;
+    box-shadow: 0 2px 10px rgba(0,119,192,0.4);
+  }
+  .ciq-top-btn-primary:hover { background: #005A94; border-color: #005A94; }
+  .ciq-top-hint {
+    font-size: 12px; color: rgba(255,255,255,0.45);
+    font-family: 'Source Sans 3', sans-serif; font-style: italic;
+  }
+
+  /* ── COURTIQ PLAYER MODAL ── */
+  .ciq-player-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(6,18,32,0.7); z-index: 2000;
+    align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(3px);
+  }
+  .ciq-player-modal-overlay.open { display: flex; }
+  .ciq-player-modal {
+    background: var(--surface); border-radius: 18px;
+    width: 580px; max-width: 98vw; max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    overflow: hidden;
+    animation: ciqModalIn .2s ease;
+  }
+  @keyframes ciqModalIn { from{transform:translateY(-12px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .ciq-pm-header {
+    background: #0d1b2a;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px; flex-shrink: 0;
+  }
+  .ciq-pm-title {
+    display: flex; align-items: center; gap: 12px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 15px;
+    font-weight: 600; color: rgba(255,255,255,0.8);
+  }
+  .ciq-pm-logo {
+    font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 800;
+    color: #fff; letter-spacing: 1px;
+  }
+  .ciq-pm-logo span { color: #e83a3a; }
+  .ciq-pm-close {
+    background: rgba(255,255,255,0.1); border: none; color: rgba(255,255,255,0.7);
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; transition: all .15s;
+  }
+  .ciq-pm-close:hover { background: rgba(255,255,255,0.2); color: #fff; }
+  .ciq-pm-search-wrap {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .ciq-pm-search {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: 'Source Sans 3', sans-serif; font-size: 15px; color: var(--text);
+  }
+  .ciq-pm-search::placeholder { color: var(--text-dim); }
+  .ciq-pm-list {
+    flex: 1; overflow-y: auto; padding: 12px 16px; display: flex;
+    flex-direction: column; gap: 6px; min-height: 200px;
+  }
+  .ciq-pm-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 16px; border-radius: var(--radius); cursor: pointer;
+    border: 2px solid var(--border); background: var(--surface2);
+    transition: all .15s; position: relative;
+  }
+  .ciq-pm-row:hover { border-color: var(--magic-blue); background: var(--magic-blue-light); }
+  .ciq-pm-row.selected { border-color: var(--magic-blue); background: var(--magic-blue-light); }
+  .ciq-pm-row.has-pdp { border-left: 4px solid #4caf82; }
+  .ciq-pm-avatar {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 700; color: #fff;
+  }
+  .ciq-pm-info { flex: 1; min-width: 0; }
+  .ciq-pm-name {
+    font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 700;
+    color: var(--magic-black); letter-spacing: .3px;
+  }
+  .ciq-pm-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .ciq-pm-pdp-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    background: #e6f7ef; color: #1a8a4a; border: 1px solid #52c27e;
+    border-radius: 5px; padding: 2px 7px; flex-shrink: 0;
+  }
+  .ciq-pm-footer {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    background: var(--surface2); flex-shrink: 0;
+  }
+  .ciq-pm-footer-note { flex: 1; font-size: 12px; color: var(--text-muted); font-style: italic; }
+  .ciq-pm-cancel {
+    background: none; border: 1.5px solid var(--border2); color: var(--text-muted);
+    border-radius: 8px; padding: 9px 18px; font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s;
+  }
+  .ciq-pm-cancel:hover { border-color: var(--magic-blue); color: var(--magic-blue); }
+  .ciq-pm-load {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--magic-blue); color: #fff; border: none; border-radius: 8px;
+    padding: 9px 22px; font-family: 'Oswald', sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: background .15s;
+    box-shadow: 0 3px 12px rgba(0,119,192,0.35);
+  }
+  .ciq-pm-load:hover { background: var(--magic-blue-dark); }
+  .ciq-pm-load:disabled { opacity: .4; pointer-events: none; }
+
+  /* ── COURTIQ INTEGRATION ── */
+  .courtiq-bar {
+    background: linear-gradient(90deg, #0d1b2a 0%, #1a2d42 100%);
+    border-radius: var(--radius-lg); padding: 14px 20px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 18px; box-shadow: var(--shadow);
+    flex-wrap: wrap;
+  }
+  .courtiq-logo {
+    font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+    color: #fff; letter-spacing: 1px; flex-shrink: 0;
+  }
+  .courtiq-logo span { color: #e83a3a; }
+  .courtiq-status {
+    font-size: 12px; color: rgba(255,255,255,0.55); flex: 1;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .courtiq-status.connected { color: #4caf82; }
+  .courtiq-status.error { color: #e83a3a; }
+  .courtiq-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.85); padding: 7px 14px; border-radius: 7px;
+    font-family: 'Source Sans 3', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .courtiq-btn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+  .courtiq-btn svg { width: 14px; height: 14px; }
+  .courtiq-btn.loading { opacity: .6; pointer-events: none; }
+
+  /* Player import panel */
+  .ciq-player-panel {
+    background: var(--surface); border: 2px solid var(--border);
+    border-radius: var(--radius-lg); padding: 18px 20px;
+    margin-bottom: 18px; display: none;
+    box-shadow: var(--shadow-sm);
+  }
+  .ciq-player-panel.open { display: block; }
+  .ciq-panel-title {
+    font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--magic-black);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .ciq-player-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px; max-height: 280px; overflow-y: auto;
+    padding: 4px 2px;
+  }
+  .ciq-player-card {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 2px solid var(--border);
+    border-radius: var(--radius); padding: 10px 14px;
+    cursor: pointer; transition: all .2s;
+  }
+  .ciq-player-card:hover { border-color: var(--magic-blue); background: var(--magic-blue-light); }
+  .ciq-player-card.selected { border-color: var(--magic-blue); background: var(--magic-blue-light); }
+  .ciq-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 700;
+    color: #fff; flex-shrink: 0;
+  }
+  .ciq-player-name { font-size: 13px; font-weight: 600; color: var(--magic-black); line-height: 1.3; }
+  .ciq-player-sub { font-size: 11px; color: var(--text-muted); }
+  .ciq-import-btn {
+    margin-top: 14px; width: 100%;
+    background: var(--magic-blue); color: #fff; border: none; border-radius: var(--radius);
+    padding: 10px; font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background .2s;
+  }
+  .ciq-import-btn:hover { background: var(--magic-blue-dark); }
+  .ciq-import-btn:disabled { opacity: .5; pointer-events: none; }
+
+  /* Stat picker modal */
+  .stat-picker-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(6,25,42,0.65); z-index: 1000;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .stat-picker-overlay.open { display: flex; }
+  .stat-picker-modal {
+    background: var(--surface); border-radius: 18px;
+    padding: 0; width: 680px; max-width: 98vw;
+    max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: var(--shadow-lg); overflow: hidden;
+  }
+  .spm-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 20px 24px; background: #0d1b2a; flex-shrink: 0;
+  }
+  .spm-header h3 {
+    font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 700;
+    color: #fff; text-transform: uppercase; letter-spacing: 1px; flex: 1;
+  }
+  .spm-close {
+    background: rgba(255,255,255,0.1); border: none; color: #fff;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  .spm-close:hover { background: rgba(255,255,255,0.2); }
+  .spm-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .spm-cat {
+    margin-bottom: 20px;
+  }
+  .spm-cat-title {
+    font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 700;
+    letter-spacing: 2px; text-transform: uppercase;
+    padding: 6px 12px; border-radius: 6px; display: inline-block;
+    margin-bottom: 10px;
+  }
+  .spm-stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px;
+  }
+  .spm-stat-btn {
+    display: flex; flex-direction: column;
+    padding: 10px 14px; border-radius: var(--radius); border: 2px solid;
+    background: transparent; cursor: pointer; transition: all .2s; text-align: left;
+  }
+  .spm-stat-btn:hover { opacity: .85; transform: translateY(-1px); }
+  .spm-stat-btn.picked { border-width: 2px; }
+  .spm-stat-name {
+    font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 700;
+    line-height: 1.2;
+  }
+  .spm-stat-pts {
+    font-size: 11px; font-weight: 600; margin-top: 3px; opacity: .75;
+  }
+  .spm-stat-check {
+    width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; margin-left: auto; margin-top: 6px;
+    transition: background .15s;
+  }
+  .spm-stat-btn.picked .spm-stat-check { background: currentColor; color: #fff; }
+  .spm-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .spm-selected-count {
+    flex: 1; font-size: 13px; color: var(--text-muted); font-weight: 500;
+  }
+  .spm-add-btn {
+    background: var(--magic-blue); color: #fff; border: none; border-radius: 8px;
+    padding: 10px 24px; font-family: 'Oswald', sans-serif; font-size: 14px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; transition: background .2s;
+  }
+  .spm-add-btn:hover { background: var(--magic-blue-dark); }
+  .spm-cancel-btn {
+    background: var(--surface); color: var(--text-muted); border: 1.5px solid var(--border2);
+    border-radius: 8px; padding: 10px 20px; font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: all .2s;
+  }
+  .spm-cancel-btn:hover { border-color: var(--magic-blue); color: var(--magic-blue); }
+
+  /* Analytics row with CourtIQ badge */
+  .sec-analytics-row .ciq-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    background: #0d1b2a; color: #fff; padding: 2px 6px; border-radius: 4px;
+    flex-shrink: 0; text-transform: uppercase;
+  }
+  .sec-analytics-row .stat-actual-val {
+    font-family: 'Oswald', sans-serif; font-size: 16px; font-weight: 700;
+    color: var(--magic-blue); min-width: 40px; text-align: center;
+    flex-shrink: 0;
+  }
+
+  /* ── SECTION TITLE EDITABLE ── */
+  .section-title-input {
+    font-family: 'Oswald', sans-serif; font-size: 26px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.5px; color: var(--magic-black);
+    background: var(--silver-xlight); border: 1px solid var(--border); border-left: none;
+    padding: 3px 18px 3px 16px; border-radius: 0 4px 4px 0;
+    outline: none; min-width: 200px;
+    transition: border-color .2s;
+  }
+  .section-title-input:focus { border-color: var(--magic-blue); background: #fff; }
+  .section-title-input::placeholder { color: var(--text-dim); font-weight: 400; }
+
+  /* ── SECTION PANEL (analytics / goals / next-steps per section) ── */
+  .sec-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); margin-top: 18px;
+    box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .sec-panel-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .sec-panel-icon {
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .sec-panel-icon svg { width: 15px; height: 15px; }
+  .sec-panel-icon.analytics-icon { background: rgba(0,119,192,0.12); color: var(--magic-blue); }
+  .sec-panel-icon.goals-icon     { background: rgba(26,138,74,0.12); color: #1a8a4a; }
+  .sec-panel-icon.steps-icon     { background: rgba(245,158,11,0.12); color: #b45309; }
+  .sec-panel-title {
+    font-family: 'Oswald', sans-serif; font-size: 13px; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-mid); flex: 1;
+  }
+  .sec-panel-body { padding: 14px 18px 16px; }
+
+  /* ── SECTION ANALYTICS (compact version of global analytics) ── */
+  .sec-analytics-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 10px 14px; margin-bottom: 7px; transition: border-color .2s;
+  }
+  .sec-analytics-row:focus-within { border-color: var(--magic-blue); }
+  .sec-metric-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text-mid); font-family: 'Source Sans 3', sans-serif; font-size: 14px;
+  }
+  .sec-metric-input::placeholder { color: var(--text-dim); }
+  .sec-sign-wrap { display: flex; gap: 3px; flex-shrink: 0; }
+  .sec-sign-btn {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 5px;
+    padding: 3px 9px; font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: all .2s; color: var(--text-muted);
+  }
+  .sec-sign-btn.positive.active { background: #e6f7ef; color: #1a8a4a; border-color: #52c27e; }
+  .sec-sign-btn.negative.active { background: #fdecea; color: #c0392b; border-color: #e87066; }
+  .sec-sign-btn:not(.active):hover { border-color: var(--magic-blue); color: var(--magic-blue); background: var(--magic-blue-light); }
+  .sec-val-input {
+    width: 56px; background: var(--silver-xlight); border: 1px solid var(--border2);
+    border-radius: 6px; padding: 4px 8px; color: var(--magic-black);
+    font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
+    text-align: center; outline: none;
+  }
+  .sec-val-input:focus { border-color: var(--magic-blue); }
+
+  /* ── GOALS ── */
+  .goal-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+  }
+  .goal-num {
+    font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 600;
+    color: var(--text-dim); flex-shrink: 0; min-width: 20px; text-align: right;
+  }
+  .goal-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 12px; color: var(--text-mid);
+    font-family: 'Source Sans 3', sans-serif; font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  .goal-input:focus { border-color: #1a8a4a; }
+  .goal-input::placeholder { color: var(--text-dim); }
+
+  /* ── NEXT STEPS CHECKLIST ── */
+  .step-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 7px;
+  }
+  .step-check {
+    width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--border2);
+    flex-shrink: 0; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background: var(--surface); transition: all .2s; position: relative;
+  }
+  .step-check:checked {
+    background: var(--magic-blue); border-color: var(--magic-blue);
+  }
+  .step-check:checked::after {
+    content: ''; position: absolute; left: 3px; top: 0px;
+    width: 6px; height: 10px; border: 2px solid #fff;
+    border-top: none; border-left: none; transform: rotate(45deg);
+  }
+  .step-input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; padding: 7px 12px; color: var(--text-mid);
+    font-family: 'Source Sans 3', sans-serif; font-size: 14px; outline: none; transition: all .2s;
+  }
+  .step-input:focus { border-color: #b45309; }
+  .step-input::placeholder { color: var(--text-dim); }
+  .step-input.done { text-decoration: line-through; color: var(--text-dim); }
+
+  /* ── ANALYTICS ── */
+  .analytics-grid { display: flex; flex-direction: column; gap: 8px; }
+  .analytics-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 13px 16px; box-shadow: var(--shadow-sm); transition: border-color .2s, box-shadow .2s;
+  }
+  .analytics-row:focus-within { border-color: var(--magic-blue); box-shadow: 0 0 0 3px rgba(0,119,192,0.08), var(--shadow); }
+  .drag-handle { color: var(--text-dim); cursor: grab; flex-shrink: 0; display: flex; }
+  .drag-handle svg { width: 16px; height: 16px; }
+  .analytics-metric-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--text-mid); font-family: 'Source Sans 3', sans-serif; font-size: 15px;
+  }
+  .analytics-metric-input::placeholder { color: var(--text-dim); }
+  .analytics-sign { display: flex; gap: 4px; flex-shrink: 0; }
+  .sign-btn {
+    background: var(--surface2); border: 1.5px solid var(--border2); border-radius: 6px; padding: 4px 11px;
+    font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .2s; color: var(--text-muted);
+  }
+  .sign-btn.positive.active { background: #e6f7ef; color: #1a8a4a; border-color: #52c27e; }
+  .sign-btn.negative.active { background: #fdecea; color: #c0392b; border-color: #e87066; }
+  .sign-btn:not(.active):hover { border-color: var(--magic-blue); color: var(--magic-blue); background: var(--magic-blue-light); }
+  .analytics-value {
+    width: 66px; background: var(--silver-xlight); border: 1.5px solid var(--border2);
+    border-radius: 7px; padding: 5px 10px; color: var(--magic-black);
+    font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 600; text-align: center; outline: none;
+  }
+  .analytics-value:focus { border-color: var(--magic-blue); }
+
+  .section-divider { border: none; height: 1px; background: linear-gradient(90deg, transparent, var(--silver), transparent); margin: 36px 0; }
+
+  /* ── SAVE BAR ── */
+  .save-bar {
+    position: fixed; bottom: 24px; right: 28px;
+    display: flex; gap: 10px; z-index: 100; align-items: center;
+  }
+  .save-status {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 11px 16px; font-size: 13px; color: var(--text-muted);
+    box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 6px;
+  }
+  .save-status.saved { color: #1a8a4a; border-color: #52c27e; background: #e6f7ef; }
+  .save-btn {
+    background: var(--magic-blue); color: #fff; border: none; border-radius: 10px;
+    padding: 11px 28px; font-family: 'Oswald', sans-serif;
+    font-size: 15px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(0,119,192,0.35);
+    transition: background .2s, transform .1s, box-shadow .2s;
+  }
+  .save-btn:hover { background: var(--magic-blue-dark); transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,119,192,0.45); }
+  .save-btn:active { transform: translateY(0); }
+
+  /* ── EXPORT MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(6,25,42,0.5); z-index: 1000;
+    align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 18px; padding: 32px 36px;
+    width: 420px; max-width: 95vw;
+    box-shadow: var(--shadow-lg);
+    animation: modalIn .2s ease;
+  }
+  @keyframes modalIn { from { transform: scale(.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-title {
+    font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--magic-black); margin-bottom: 6px;
+  }
+  .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .modal-options { display: flex; flex-direction: column; gap: 12px; }
+  .modal-option {
+    display: flex; align-items: center; gap: 16px;
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 16px 18px;
+    cursor: pointer; transition: all .2s; background: var(--surface2); text-decoration: none;
+  }
+  .modal-option:hover { box-shadow: var(--shadow); }
+  .modal-option.pdf-opt:hover { border-color: #c0392b; background: #fdf0ee; }
+  .modal-option.word-opt:hover { border-color: #1a5296; background: #eef3fd; }
+  .modal-option.gdoc-opt:hover { border-color: #1a6b3c; background: #edf7f2; }
+  .modal-opt-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .pdf-opt .modal-opt-icon  { background: #fdecea; }
+  .word-opt .modal-opt-icon { background: #eef3fd; }
+  .gdoc-opt .modal-opt-icon { background: #edf7f2; }
+  .modal-opt-icon svg { width: 24px; height: 24px; }
+  .modal-opt-info { flex: 1; }
+  .modal-opt-name { font-family: 'Oswald', sans-serif; font-size: 17px; font-weight: 600; letter-spacing: .5px; }
+  .pdf-opt  .modal-opt-name { color: #c0392b; }
+  .word-opt .modal-opt-name { color: #1a5296; }
+  .gdoc-opt .modal-opt-name { color: #1a6b3c; }
+  .modal-opt-desc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .modal-arrow { color: var(--text-dim); }
+  .modal-close {
+    position: absolute; top: 16px; right: 20px;
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); font-size: 22px; line-height: 1; padding: 4px 8px;
+    border-radius: 6px; transition: color .2s;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal { position: relative; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--silver); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--silver-dark); }
+</style>
+</head>
+<body>
+
+<div class="top-bar"></div>
+
+<!-- COURTIQ TOP BAR -->
+<div class="ciq-top-bar" id="ciq-top-bar">
+  <div class="ciq-top-left">
+    <div class="ciq-top-logo">COURT<span>IQ</span></div>
+    <div class="ciq-top-status" id="ciq-status">
+      <span class="ciq-dot" id="ciq-dot"></span>
+      <span id="ciq-status-text">Not connected</span>
+    </div>
+  </div>
+  <div class="ciq-top-actions">
+    <button class="ciq-top-btn" onclick="ciqSync()" id="ciq-sync-btn">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Sync CourtIQ
+    </button>
+    <button class="ciq-top-btn ciq-top-btn-primary" id="ciq-load-player-btn" onclick="ciqOpenPlayerModal()" style="display:none">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+      Load Player
+    </button>
+    <span class="ciq-top-hint" id="ciq-loaded-name" style="display:none"></span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <svg class="header-deco" viewBox="0 0 120 120" fill="white">
+    <circle cx="60" cy="60" r="58" fill="none" stroke="white" stroke-width="1"/>
+    <path d="M60 60 L60 4 A56 56 0 0 1 116 60 Z"/>
+    <path d="M60 60 L116 60 A56 56 0 0 1 60 116 Z"/>
+    <path d="M60 60 L60 116 A56 56 0 0 1 4 60 Z"/>
+    <path d="M60 60 L4 60 A56 56 0 0 1 60 4 Z"/>
+    <circle cx="60" cy="60" r="8" fill="white"/>
+  </svg>
+  <div class="player-photo-wrap">
+    <input type="file" id="photo-input" accept="image/*">
+    <div class="player-photo-placeholder" id="photo-placeholder" onclick="document.getElementById('photo-input').click()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+      </svg>
+      <span>Add Photo</span>
+    </div>
+    <img id="player-photo" class="player-photo" style="display:none" onclick="document.getElementById('photo-input').click()" alt="Player">
+  </div>
+  <div class="header-info">
+    <div class="header-eyebrow">Player Development Plan</div>
+    <input class="player-name" id="player-name" placeholder="Player Name" spellcheck="false">
+    <div class="header-meta">
+      <div class="meta-field"><label>Teams</label><input id="meta-teams" placeholder="e.g. Varsity, Travel"></div>
+      <div class="meta-field"><label>Experience</label><input id="meta-exp" placeholder="e.g. 5 years"></div>
+      <div class="meta-field"><label>Other Sports</label><input id="meta-sports" placeholder="e.g. Football, Track"></div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT BAR -->
+<div class="export-bar">
+  <span class="export-label">Export</span>
+  <button class="export-btn pdf" onclick="showExportModal()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 13h1.5c.8 0 1.5.7 1.5 1.5S10.3 16 9.5 16H9v1.5H8V13zm1.5 2c.3 0 .5-.2.5-.5s-.2-.5-.5-.5H9v1h.5zm3-2H14c.6 0 1 .4 1 1v2c0 .6-.4 1-1 1h-1.5V13zm1 3h.5v-2H13v2zm2.5-3H17v1h-1.5v.5H17v1h-1.5V16H15v-3z"/></svg>
+    PDF
+  </button>
+  <button class="export-btn word" onclick="showExportModal()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM9 13l1.5 5 1.5-4 1.5 4L15 13h-1l-1 3.2-1.5-4-1.5 4L9 13z"/></svg>
+    Word
+  </button>
+  <button class="export-btn gdoc" onclick="showExportModal()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-4 9h8v1H9v-1zm0 2h8v1H9v-1zm0 2h6v1H9v-1z"/></svg>
+    Google Doc
+  </button>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="export-modal" onclick="if(event.target===this)closeExportModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeExportModal()">✕</button>
+    <div class="modal-title">Export Plan</div>
+    <div class="modal-sub">Choose your preferred format to download or open this PDP.</div>
+    <div class="modal-options">
+      <div class="modal-option pdf-opt" onclick="exportPDF()">
+        <div class="modal-opt-icon">
+          <svg viewBox="0 0 24 24" fill="#c0392b"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 13h1.5c.8 0 1.5.7 1.5 1.5S10.3 16 9.5 16H9v1.5H8V13zm1.5 2c.3 0 .5-.2.5-.5s-.2-.5-.5-.5H9v1h.5zm3-2H14c.6 0 1 .4 1 1v2c0 .6-.4 1-1 1h-1.5V13zm1 3h.5v-2H13v2zm2.5-3H17v1h-1.5v.5H17v1h-1.5V16H15v-3z"/></svg>
+        </div>
+        <div class="modal-opt-info">
+          <div class="modal-opt-name">PDF Document</div>
+          <div class="modal-opt-desc">Download as a print-ready PDF file</div>
+        </div>
+        <div class="modal-arrow">→</div>
+      </div>
+      <div class="modal-option word-opt" onclick="exportWord()">
+        <div class="modal-opt-icon">
+          <svg viewBox="0 0 24 24" fill="#1a5296"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM9 13l1.5 5 1.5-4 1.5 4L15 13h-1l-1 3.2-1.5-4-1.5 4L9 13z"/></svg>
+        </div>
+        <div class="modal-opt-info">
+          <div class="modal-opt-name">Word Document</div>
+          <div class="modal-opt-desc">Download as a .docx file for Microsoft Word</div>
+        </div>
+        <div class="modal-arrow">→</div>
+      </div>
+      <div class="modal-option gdoc-opt" onclick="exportGoogleDoc()">
+        <div class="modal-opt-icon">
+          <svg viewBox="0 0 24 24" fill="#1a6b3c"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zm-4 9h8v1H9v-1zm0 2h8v1H9v-1zm0 2h6v1H9v-1z"/></svg>
+        </div>
+        <div class="modal-opt-info">
+          <div class="modal-opt-name">Google Doc</div>
+          <div class="modal-opt-desc">Open in Google Docs (requires sign-in)</div>
+        </div>
+        <div class="modal-arrow">→</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- CourtIQ Player Load Modal -->
+<div class="ciq-player-modal-overlay" id="ciq-player-modal" onclick="if(event.target===this)ciqClosePlayerModal()">
+  <div class="ciq-player-modal">
+    <div class="ciq-pm-header">
+      <div class="ciq-pm-title">
+        <div class="ciq-pm-logo">COURT<span>IQ</span></div>
+        Load Player into PDP
+      </div>
+      <button class="ciq-pm-close" onclick="ciqClosePlayerModal()">✕</button>
+    </div>
+    <div class="ciq-pm-search-wrap">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16" style="color:var(--text-dim);flex-shrink:0"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input class="ciq-pm-search" id="ciq-pm-search" type="text" placeholder="Search players..." oninput="renderCiqPlayerModal()">
+    </div>
+    <div class="ciq-pm-list" id="ciq-pm-list"></div>
+    <div class="ciq-pm-footer">
+      <div class="ciq-pm-footer-note" id="ciq-pm-footer-note"></div>
+      <button class="ciq-pm-cancel" onclick="ciqClosePlayerModal()">Cancel</button>
+      <button class="ciq-pm-load" id="ciq-pm-load-btn" onclick="ciqLoadPlayer()" disabled>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Load Player
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CourtIQ Stat Picker Modal -->
+<div class="stat-picker-overlay" id="stat-picker-overlay">
+  <div class="stat-picker-modal">
+    <div class="spm-header">
+      <h3>
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20" height="20" style="display:inline;margin-right:8px;vertical-align:middle"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        CourtIQ Stats — Pick Metrics to Track
+      </h3>
+      <button class="spm-close" onclick="closeStatPicker()">✕</button>
+    </div>
+    <div class="spm-body" id="spm-body"></div>
+    <div class="spm-footer">
+      <span class="spm-selected-count" id="spm-count">0 stats selected</span>
+      <button class="spm-cancel-btn" onclick="closeStatPicker()">Cancel</button>
+      <button class="spm-add-btn" onclick="addPickedStats()">Add to Section</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- INTRO -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-badge badge-intro">Profile</span>
+      <span class="section-title">Introduction</span>
+    </div>
+    <div class="intro-card">
+      <textarea class="intro-textarea" id="intro-text" placeholder="Describe the player's playing style, strengths, and areas for improvement..."></textarea>
+    </div>
+  </div>
+  <hr class="section-divider">
+
+  <!-- TEAM VITAMINS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-badge badge-team">Team</span>
+      <input class="section-title-input" id="team-section-title" value="Team Vitamins" placeholder="Section title..."
+        oninput="state.teamSectionTitle=this.value;markUnsaved()">
+    </div>
+    <div id="team-vitamins-list"></div>
+    <div class="add-vitamin-wrap">
+      <button class="add-vitamin-btn" id="add-team-vitamin">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Team Vitamin
+        <span class="limit-note" id="team-limit-note">0 / 5</span>
+      </button>
+    </div>
+    <!-- TEAM section panels -->
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon analytics-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></span>
+        <span class="sec-panel-title">Data Analytics</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="team-sec-analytics"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+          <button class="add-btn" onclick="addSecAnalytic('team')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Custom Metric
+          </button>
+          <button class="add-btn" id="ciq-pick-btn-team" onclick="openStatPicker('team')" style="border-color:#0077C0;color:#0077C0;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            From CourtIQ
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon goals-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+        <span class="sec-panel-title">Goals</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="team-goals"></div>
+        <button class="add-btn" onclick="addGoal('team')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Goal
+        </button>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon steps-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
+        <span class="sec-panel-title">Next Steps</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="team-steps"></div>
+        <button class="add-btn" onclick="addStep('team')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Step
+        </button>
+      </div>
+    </div>
+    <div class="themes-wrap">
+      <div class="themes-title">Themes</div>
+      <div class="themes-list" id="team-themes-list"></div>
+    </div>
+  </div>
+  <hr class="section-divider">
+
+  <!-- SKILL VITAMINS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-badge badge-skill">Skill</span>
+      <input class="section-title-input" id="skill-section-title" value="Skill Vitamins" placeholder="Section title..."
+        oninput="state.skillSectionTitle=this.value;markUnsaved()">
+    </div>
+    <div id="skill-vitamins-list"></div>
+    <div class="add-vitamin-wrap">
+      <button class="add-vitamin-btn" id="add-skill-vitamin">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Skill Vitamin
+        <span class="limit-note" id="skill-limit-note">0 / 5</span>
+      </button>
+    </div>
+    <!-- SKILL section panels -->
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon analytics-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></span>
+        <span class="sec-panel-title">Data Analytics</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="skill-sec-analytics"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+          <button class="add-btn" onclick="addSecAnalytic('skill')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Custom Metric
+          </button>
+          <button class="add-btn" id="ciq-pick-btn-skill" onclick="openStatPicker('skill')" style="border-color:#0077C0;color:#0077C0;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            From CourtIQ
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon goals-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+        <span class="sec-panel-title">Goals</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="skill-goals"></div>
+        <button class="add-btn" onclick="addGoal('skill')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Goal
+        </button>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon steps-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
+        <span class="sec-panel-title">Next Steps</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="skill-steps"></div>
+        <button class="add-btn" onclick="addStep('skill')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Step
+        </button>
+      </div>
+    </div>
+    <div class="themes-wrap">
+      <div class="themes-title">Themes</div>
+      <div class="themes-list" id="skill-themes-list"></div>
+    </div>
+  </div>
+  <hr class="section-divider">
+
+  <!-- IQ VITAMINS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-badge badge-iq">IQ</span>
+      <input class="section-title-input" id="iq-section-title" value="IQ Vitamins" placeholder="Section title..."
+        oninput="state.iqSectionTitle=this.value;markUnsaved()">
+    </div>
+    <div id="iq-vitamins-list"></div>
+    <div class="add-vitamin-wrap">
+      <button class="add-vitamin-btn" id="add-iq-vitamin">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add IQ Vitamin
+        <span class="limit-note" id="iq-limit-note">0 / 5</span>
+      </button>
+    </div>
+    <!-- IQ section panels -->
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon analytics-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></span>
+        <span class="sec-panel-title">Data Analytics</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="iq-sec-analytics"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+          <button class="add-btn" onclick="addSecAnalytic('iq')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Add Custom Metric
+          </button>
+          <button class="add-btn" id="ciq-pick-btn-iq" onclick="openStatPicker('iq')" style="border-color:#0077C0;color:#0077C0;">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            From CourtIQ
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon goals-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></span>
+        <span class="sec-panel-title">Goals</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="iq-goals"></div>
+        <button class="add-btn" onclick="addGoal('iq')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Goal
+        </button>
+      </div>
+    </div>
+    <div class="sec-panel">
+      <div class="sec-panel-head">
+        <span class="sec-panel-icon steps-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg></span>
+        <span class="sec-panel-title">Next Steps</span>
+      </div>
+      <div class="sec-panel-body">
+        <div id="iq-steps"></div>
+        <button class="add-btn" onclick="addStep('iq')" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add Step
+        </button>
+      </div>
+    </div>
+    <div class="themes-wrap">
+      <div class="themes-title">Themes</div>
+      <div class="themes-list" id="iq-themes-list"></div>
+    </div>
+  </div>
+  <hr class="section-divider">
+
+  <!-- ANALYTICS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-badge badge-analytics">Data</span>
+      <span class="section-title">Analytics</span>
+    </div>
+    <div class="analytics-grid" id="analytics-list"></div>
+    <div style="margin-top:10px">
+      <button class="add-btn" id="add-analytics">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add Metric
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SAVE BAR -->
+<div class="save-bar">
+  <div class="save-status" id="save-status">Auto-saved locally</div>
+  <button class="save-btn" onclick="saveData()">Save</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+const state = {
+  playerName:'', photo:'', teams:'', experience:'', otherSports:'', intro:'',
+  teamSectionTitle:'Team Vitamins', skillSectionTitle:'Skill Vitamins', iqSectionTitle:'IQ Vitamins',
+  teamVitamins:[], skillVitamins:[], iqVitamins:[],
+  teamThemes:[], skillThemes:[], iqThemes:[],
+  teamAnalytics:[], skillAnalytics:[], iqAnalytics:[],
+  teamGoals:[], skillGoals:[], iqGoals:[],
+  teamSteps:[], skillSteps:[], iqSteps:[],
+  analytics:[]
+};
+
+// ═══════════════════════════════════════════
+//  PHOTO
+// ═══════════════════════════════════════════
+document.getElementById('photo-input').addEventListener('change', function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.photo = ev.target.result;
+    document.getElementById('player-photo').src = ev.target.result;
+    document.getElementById('player-photo').style.display = 'block';
+    document.getElementById('photo-placeholder').style.display = 'none';
+    markUnsaved();
+  };
+  reader.readAsDataURL(file);
+});
+['player-name','meta-teams','meta-exp','meta-sports','intro-text'].forEach(id =>
+  document.getElementById(id).addEventListener('input', markUnsaved));
+
+// ═══════════════════════════════════════════
+//  VITAMIN RENDERING
+// ═══════════════════════════════════════════
+function getV(type) { return state[type+'Vitamins']; }
+
+function makeVitaminCard(type, idx, data) {
+  const card = document.createElement('div');
+  card.className = `vitamin-card ${type}-card`;
+  const isOpen = data.open !== false;
+  card.innerHTML = `
+    <div class="vitamin-head" onclick="toggleVitamin(this)">
+      <div class="vitamin-color-bar ${type}-bar"></div>
+      <div class="vitamin-head-inner">
+        <span class="vitamin-num">#${idx+1}</span>
+        <input class="vitamin-name-input" placeholder="Vitamin name..." value="${esc(data.name||'')}"
+          onclick="event.stopPropagation()" oninput="vitFld(this,'name','${type}',${idx})">
+      </div>
+      <button class="vitamin-toggle ${isOpen?'open':''}"
+        onclick="event.stopPropagation();toggleVitamin(this.closest('.vitamin-head'))">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <button class="delete-item-btn" onclick="event.stopPropagation();delVit('${type}',${idx})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="vitamin-body ${isOpen?'open':''}">
+      <div class="field-label">Notes</div>
+      <textarea class="vit-notes" placeholder="Coaching notes..." oninput="vitFld(this,'notes','${type}',${idx})">${esc(data.notes||'')}</textarea>
+
+      <div class="field-label">Links &amp; Resources</div>
+      <div id="${type}-links-${idx}"></div>
+      <button class="add-btn" onclick="addLink('${type}',${idx})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add link
+      </button>
+
+      <div class="field-label" style="margin-top:18px">Sub-items</div>
+      <div id="${type}-sub-${idx}"></div>
+      <button class="add-btn" onclick="addSub('${type}',${idx})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Add sub-item
+      </button>
+    </div>`;
+  return card;
+}
+
+function ensureSub(type, vi, si) {
+  // Migrate legacy string sub-items to objects
+  const subs = getV(type)[vi].subitems;
+  if (typeof subs[si] === 'string') subs[si] = { text: subs[si], notes: '', links: [] };
+  if (!subs[si].links) subs[si].links = [];
+  return subs[si];
+}
+
+function renderSubLinks(type, vi, si) {
+  const c = document.getElementById(`${type}-sub-${vi}-${si}-links`); if (!c) return;
+  c.innerHTML = '';
+  const links = ensureSub(type, vi, si).links;
+  links.forEach((lk, li) => {
+    const row = document.createElement('div'); row.className = 'link-row';
+    row.innerHTML = `
+      <span class="link-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+      </svg></span>
+      <input class="link-input" placeholder="Paste URL..." value="${esc(lk)}"
+        oninput="subLnkChg(this,'${type}',${vi},${si},${li})">
+      <button class="link-open" onclick="openSubLnk('${type}',${vi},${si},${li})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+      </button>
+      <button class="delete-item-btn" onclick="delSubLnk('${type}',${vi},${si},${li})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    c.appendChild(row);
+  });
+}
+
+function renderSubs(type, vIdx) {
+  const c = document.getElementById(`${type}-sub-${vIdx}`); if (!c) return;
+  c.innerHTML = '';
+  (getV(type)[vIdx].subitems||[]).forEach((si, i) => {
+    const sub = ensureSub(type, vIdx, i);
+    const block = document.createElement('div'); block.className = 'subitem-block';
+    block.innerHTML = `
+      <div class="subitem-block-header">
+        <span class="subitem-bullet">›</span>
+        <input class="subitem-input" placeholder="Sub-item title..." value="${esc(sub.text||'')}"
+          oninput="subChg(this,'${type}',${vIdx},${i},'text')" style="flex:1">
+        <button class="delete-item-btn" onclick="delSub('${type}',${vIdx},${i})">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="subitem-block-body">
+        <div class="sub-field-label">Notes</div>
+        <textarea class="sub-notes" placeholder="Notes for this sub-item..."
+          oninput="subChg(this,'${type}',${vIdx},${i},'notes')">${esc(sub.notes||'')}</textarea>
+        <div class="sub-field-label">Links &amp; Resources</div>
+        <div id="${type}-sub-${vIdx}-${i}-links"></div>
+        <button class="add-btn" onclick="addSubLnk('${type}',${vIdx},${i})" style="margin-top:4px">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Add link
+        </button>
+      </div>`;
+    c.appendChild(block);
+    renderSubLinks(type, vIdx, i);
+  });
+}
+
+function renderLinks(type, vIdx) {
+  const c = document.getElementById(`${type}-links-${vIdx}`); if (!c) return;
+  c.innerHTML = '';
+  (getV(type)[vIdx].links||[]).forEach((lk, i) => {
+    const row = document.createElement('div'); row.className = 'link-row';
+    row.innerHTML = `
+      <span class="link-icon"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+      </svg></span>
+      <input class="link-input" placeholder="Paste URL..." value="${esc(lk)}" oninput="lnkChg(this,'${type}',${vIdx},${i})">
+      <button class="link-open" onclick="openLnk('${type}',${vIdx},${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+        </svg>
+      </button>
+      <button class="delete-item-btn" onclick="delLnk('${type}',${vIdx},${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    c.appendChild(row);
+  });
+}
+
+function renderSection(type) {
+  const list = document.getElementById(`${type}-vitamins-list`);
+  list.innerHTML = '';
+  getV(type).forEach((v, i) => {
+    const card = makeVitaminCard(type, i, v); list.appendChild(card);
+    renderSubs(type, i); renderLinks(type, i);
+  });
+  const n = getV(type).length;
+  const note = document.getElementById(`${type}-limit-note`); if (note) note.textContent = `${n} / 5`;
+  const btn = document.getElementById(`add-${type}-vitamin`); if (btn) btn.style.opacity = n >= 5 ? '0.4' : '1';
+}
+function renderAll() { ['team','skill','iq'].forEach(renderSection); }
+
+function toggleVitamin(head) {
+  const body = head.nextElementSibling;
+  const tog = head.querySelector('.vitamin-toggle');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open); tog.classList.toggle('open', !open);
+}
+
+function addVit(type) {
+  if (getV(type).length >= 5) return;
+  getV(type).push({ name:'', notes:'', subitems:[], links:[], open:true });
+  renderSection(type); markUnsaved();
+}
+function delVit(type, i) { getV(type).splice(i,1); renderSection(type); markUnsaved(); }
+function vitFld(el, fld, type, i) { getV(type)[i][fld] = el.value; markUnsaved(); }
+function addSub(type, vi) {
+  getV(type)[vi].subitems = getV(type)[vi].subitems||[];
+  getV(type)[vi].subitems.push({ text:'', notes:'', links:[] });
+  renderSubs(type,vi); markUnsaved();
+}
+function subChg(el, type, vi, si, field) {
+  ensureSub(type, vi, si)[field] = el.value; markUnsaved();
+}
+function delSub(type, vi, si) { getV(type)[vi].subitems.splice(si,1); renderSubs(type,vi); markUnsaved(); }
+function addSubLnk(type, vi, si) { ensureSub(type,vi,si).links.push(''); renderSubLinks(type,vi,si); markUnsaved(); }
+function subLnkChg(el, type, vi, si, li) { ensureSub(type,vi,si).links[li] = el.value; markUnsaved(); }
+function delSubLnk(type, vi, si, li) { ensureSub(type,vi,si).links.splice(li,1); renderSubLinks(type,vi,si); markUnsaved(); }
+function openSubLnk(type, vi, si, li) { let u = ensureSub(type,vi,si).links[li]; if (!u) return; if (!u.startsWith('http')) u='https://'+u; window.open(u,'_blank'); }
+function addLink(type, vi) { getV(type)[vi].links = getV(type)[vi].links||[]; getV(type)[vi].links.push(''); renderLinks(type,vi); markUnsaved(); }
+function lnkChg(el, type, vi, li) { getV(type)[vi].links[li] = el.value; markUnsaved(); }
+function delLnk(type, vi, li) { getV(type)[vi].links.splice(li,1); renderLinks(type,vi); markUnsaved(); }
+function openLnk(type, vi, li) { let u = getV(type)[vi].links[li]; if (!u) return; if (!u.startsWith('http')) u='https://'+u; window.open(u,'_blank'); }
+
+
+// ═══════════════════════════════════════════
+//  SECTION ANALYTICS
+// ═══════════════════════════════════════════
+function renderSecAnalytics(type) {
+  const list = document.getElementById(`${type}-sec-analytics`); if (!list) return;
+  list.innerHTML = '';
+  if (!(state[type+'Analytics']||[]).length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--text-dim);padding:6px 0;">No metrics yet — add a custom metric or pick stats from CourtIQ.</p>';
+    return;
+  }
+  (state[type+'Analytics']||[]).forEach((a, i) => {
+    const row = document.createElement('div'); row.className = 'sec-analytics-row';
+    const isCiq = a.fromCourtIQ;
+    const actualDisplay = (isCiq && a.actualVal !== null && a.actualVal !== undefined)
+      ? `<span class="stat-actual-val" title="Actual value from CourtIQ">${a.actualVal}</span>` : '';
+    const ciqBadge = isCiq ? `<span class="ciq-badge" title="Pulled from CourtIQ">CIQ</span>` : '';
+    row.innerHTML = `
+      ${ciqBadge}
+      <input class="sec-metric-input" placeholder="Metric name..." value="${esc(a.metric||'')}"
+        oninput="secAnalChg(this,'${type}',${i},'metric')" ${isCiq ? 'style="color:var(--magic-blue-dark);font-weight:500;"' : ''}>
+      ${actualDisplay}
+      <div class="sec-sign-wrap">
+        <button class="sec-sign-btn positive ${a.sign==='+'?'active':''}" onclick="secTogSign('${type}',${i},'+')">+</button>
+        <button class="sec-sign-btn negative ${a.sign==='-'?'active':''}" onclick="secTogSign('${type}',${i},'-')">−</button>
+      </div>
+      <input class="sec-val-input" type="number" placeholder="Pts" value="${a.value||''}"
+        oninput="secAnalChg(this,'${type}',${i},'value')">
+      <button class="delete-item-btn" onclick="delSecAnalytic('${type}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    list.appendChild(row);
+  });
+}
+function addSecAnalytic(type) { state[type+'Analytics'].push({metric:'',sign:'+',value:'',fromCourtIQ:false}); renderSecAnalytics(type); markUnsaved(); }
+function secAnalChg(el,type,i,fld) { state[type+'Analytics'][i][fld]=el.value; markUnsaved(); }
+function secTogSign(type,i,sign) { state[type+'Analytics'][i].sign = state[type+'Analytics'][i].sign===sign?'':sign; renderSecAnalytics(type); markUnsaved(); }
+function delSecAnalytic(type,i) { state[type+'Analytics'].splice(i,1); renderSecAnalytics(type); markUnsaved(); }
+
+// ═══════════════════════════════════════════
+//  GOALS
+// ═══════════════════════════════════════════
+function renderGoals(type) {
+  const list = document.getElementById(`${type}-goals`); if (!list) return;
+  list.innerHTML = '';
+  (state[type+'Goals']||[]).forEach((g, i) => {
+    const row = document.createElement('div'); row.className = 'goal-row';
+    row.innerHTML = `
+      <span class="goal-num">${i+1}.</span>
+      <input class="goal-input" placeholder="Add a goal..." value="${esc(g)}"
+        oninput="goalChg(this,'${type}',${i})">
+      <button class="delete-item-btn" onclick="delGoal('${type}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    list.appendChild(row);
+  });
+}
+function addGoal(type) { state[type+'Goals'].push(''); renderGoals(type); markUnsaved(); }
+function goalChg(el,type,i) { state[type+'Goals'][i]=el.value; markUnsaved(); }
+function delGoal(type,i) { state[type+'Goals'].splice(i,1); renderGoals(type); markUnsaved(); }
+
+// ═══════════════════════════════════════════
+//  NEXT STEPS
+// ═══════════════════════════════════════════
+function renderSteps(type) {
+  const list = document.getElementById(`${type}-steps`); if (!list) return;
+  list.innerHTML = '';
+  (state[type+'Steps']||[]).forEach((s, i) => {
+    const step = typeof s === 'string' ? {text:s, done:false} : s;
+    const row = document.createElement('div'); row.className = 'step-row';
+    row.innerHTML = `
+      <input type="checkbox" class="step-check" ${step.done?'checked':''} onchange="stepDone(this,'${type}',${i})">
+      <input class="step-input ${step.done?'done':''}" placeholder="Add a next step..." value="${esc(step.text||'')}"
+        oninput="stepChg(this,'${type}',${i})">
+      <button class="delete-item-btn" onclick="delStep('${type}',${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    list.appendChild(row);
+  });
+}
+function addStep(type) { state[type+'Steps'].push({text:'',done:false}); renderSteps(type); markUnsaved(); }
+function stepChg(el,type,i) {
+  if(typeof state[type+'Steps'][i]==='string') state[type+'Steps'][i]={text:state[type+'Steps'][i],done:false};
+  state[type+'Steps'][i].text=el.value; markUnsaved();
+}
+function stepDone(el,type,i) {
+  if(typeof state[type+'Steps'][i]==='string') state[type+'Steps'][i]={text:state[type+'Steps'][i],done:false};
+  state[type+'Steps'][i].done=el.checked;
+  el.nextElementSibling.classList.toggle('done',el.checked);
+  markUnsaved();
+}
+function delStep(type,i) { state[type+'Steps'].splice(i,1); renderSteps(type); markUnsaved(); }
+function renderAllPanels() {
+  ['team','skill','iq'].forEach(t => {
+    renderSecAnalytics(t); renderGoals(t); renderSteps(t);
+  });
+}
+
+
+// ═══════════════════════════════════════════
+//  COURTIQ INTEGRATION
+// ═══════════════════════════════════════════
+const CIQ_URL   = 'https://ofncwpbpsgmoezxhfxya.supabase.co';
+const CIQ_KEY   = 'sb_publishable_7-tKwWBogVdwo6TCWUpGGw_8CGOdmy2';
+const CIQ_TABLE = 'hoopiq_data';
+const CIQ_ROW   = 'hoopiq-main';
+
+// PDP data is stored per-player in localStorage under this prefix + player ID
+const PDP_PLAYER_PREFIX = 'pdp_player_';
+
+const CIQ_CATEGORIES = [
+  {
+    id: 'off', name: 'Offense', color: '#c62828',
+    stats: [
+      { id:'fg2m',    name:'2PT Made',            value: 2    },
+      { id:'fg2miss', name:'2PT Missed',           value: -0.5 },
+      { id:'fg2a',    name:'2PT Attempted',        value: 0    },
+      { id:'fg3m',    name:'3PT Made',             value: 3    },
+      { id:'fg3miss', name:'3PT Missed',           value: -0.5 },
+      { id:'fg3a',    name:'3PT Attempted',        value: 0    },
+      { id:'ftm',     name:'FT Made',              value: 1    },
+      { id:'ftmiss',  name:'FT Missed',            value: -0.5 },
+      { id:'fta',     name:'FT Attempted',         value: 0    },
+      { id:'ast',     name:'Assists',              value: 1.5  },
+      { id:'tov',     name:'Turnovers',            value: -1   },
+      { id:'blkd',    name:'Blocked',              value: -1   },
+      { id:'chg',     name:'Charge Drawn',         value: 2    },
+      { id:'oreb',    name:'Offensive Rebounds',   value: 1    },
+      { id:'and1',    name:'And-1',                value: 1    },
+      { id:'actions', name:'Actions',              value: 0.5  },
+      { id:'pts',     name:'Points',               value: 1    },
+    ]
+  },
+  {
+    id: 'trans', name: 'Transition', color: '#1d6fa4',
+    stats: [
+      { id:'bolt',     name:'Bolt',                 value: 2    },
+      { id:'btl',      name:'BTL (Beat the Line)',  value: 1.5  },
+      { id:'bkdrib',   name:'Breakout Dribbles',    value: 0.5  },
+      { id:'a2a',      name:'Arc to Arc',           value: 1    },
+      { id:'twosides', name:'2-Sides',              value: 1.5  },
+      { id:'layups',   name:'Transition Layups',    value: 2    },
+      { id:'trn3',     name:'Transition 3PT',       value: 3    },
+      { id:'trnast',   name:'Transition Assists',   value: 2    },
+      { id:'pushes',   name:'Pushes',               value: 1    },
+    ]
+  },
+  {
+    id: 'def', name: 'Defense', color: '#2d9e5a',
+    stats: [
+      { id:'stl',    name:'Steals',               value: 2    },
+      { id:'blk',    name:'Blocks',               value: 2    },
+      { id:'defl',   name:'Deflections',          value: 1    },
+      { id:'dreb',   name:'Defensive Rebounds',   value: 1    },
+      { id:'ddeny',  name:'Denial',               value: 0.5  },
+      { id:'helpd',  name:'Help Defense',         value: 0.5  },
+      { id:'contst', name:'Contested Shots',      value: 0.5  },
+      { id:'boxout', name:'Box Outs',             value: 0.5  },
+      { id:'dchg',   name:'Charge Taken',         value: 2    },
+    ]
+  },
+  {
+    id: 'ov', name: 'Overall', color: '#d4891a',
+    stats: [
+      { id:'pm',        name:'Plus/Minus',          value: 1    },
+      { id:'min',       name:'Minutes',             value: 0    },
+      { id:'hifi',      name:'High Fives',          value: 0.25 },
+      { id:'comm',      name:'Communications',      value: 0.5  },
+      { id:'effort',    name:'Effort Plays',        value: 1    },
+      { id:'iq',        name:'IQ Plays',            value: 1    },
+      { id:'pressBrk',  name:'Press Break',         value: 2    },
+      { id:'pickdrib',  name:'Picked Up Dribble',   value: -1   },
+      { id:'earlypass', name:'Passed Too Soon',     value: -1   },
+      { id:'fouls',     name:'Fouls',               value: -1   },
+      { id:'techfoul',  name:'Technical Foul',      value: -2   },
+      { id:'score',     name:'Aggregate Score',     value: 1    },
+    ]
+  },
+];
+
+let _ciqClient            = null;
+let _ciqPlayers           = [];      // raw player objects from Supabase
+let _ciqConnected         = false;
+let _ciqSelectedPlayerId  = null;    // ID of player highlighted in modal
+let _ciqLoadedPlayerId    = null;    // ID of player whose PDP is currently active
+let _pickerTargetSection  = null;
+let _pickerSelected       = new Set();
+
+function getCiqClient() {
+  if (!_ciqClient && window.supabase)
+    _ciqClient = window.supabase.createClient(CIQ_URL, CIQ_KEY);
+  return _ciqClient;
+}
+
+// ── Status bar ──────────────────────────────────────────────────────────────
+function setCiqStatus(phase, msg) {
+  const dot  = document.getElementById('ciq-dot');
+  const text = document.getElementById('ciq-status-text');
+  if (dot)  { dot.className = 'ciq-dot ' + phase; }
+  if (text) { text.textContent = msg; }
+  // Also update the top-bar status colour
+  const topStatus = document.getElementById('ciq-status');
+  if (topStatus) {
+    topStatus.style.color = phase === 'connected' ? 'rgba(76,175,130,0.9)'
+                          : phase === 'error'     ? 'rgba(232,58,58,0.9)'
+                          : 'rgba(255,255,255,0.45)';
+  }
+}
+
+// ── Sync from Supabase ───────────────────────────────────────────────────────
+async function ciqSync() {
+  const sb = getCiqClient();
+  if (!sb) { setCiqStatus('error', 'Supabase unavailable'); return; }
+
+  const btn = document.getElementById('ciq-sync-btn');
+  if (btn) btn.classList.add('loading');
+  setCiqStatus('syncing', 'Connecting…');
+
+  try {
+    const { data, error } = await sb
+      .from(CIQ_TABLE).select('data').eq('id', CIQ_ROW).maybeSingle();
+    if (error) throw error;
+
+    const d = data?.data || {};
+    _ciqPlayers = d.players || [];
+
+    // Merge any Supabase-side custom categories/stats
+    const sbCats = d.categories || [];
+    sbCats.forEach(sbCat => {
+      const ex = CIQ_CATEGORIES.find(c => c.id === sbCat.id);
+      if (!ex) { CIQ_CATEGORIES.push(sbCat); }
+      else {
+        (sbCat.stats||[]).forEach(s => {
+          if (!ex.stats.find(x => x.id === s.id)) ex.stats.push(s);
+        });
+      }
+    });
+
+    _ciqConnected = true;
+    const n = _ciqPlayers.length;
+    setCiqStatus('connected', `Connected · ${n} player${n===1?'':'s'}`);
+
+    // Show "Load Player" button
+    const lb = document.getElementById('ciq-load-player-btn');
+    if (lb) lb.style.display = '';
+
+    showCiqToast(`✓ CourtIQ synced — ${n} player${n===1?'':'s'} available`);
+
+  } catch(e) {
+    console.error('CourtIQ sync error:', e);
+    setCiqStatus('error', 'Sync failed');
+    showCiqToast('CourtIQ sync failed — check console');
+  } finally {
+    if (btn) btn.classList.remove('loading');
+  }
+}
+
+// ── Per-player PDP persistence ───────────────────────────────────────────────
+// Save the entire current state keyed to the given CourtIQ player ID
+function savePlayerPDP(playerId) {
+  if (!playerId) return;
+  collectState();
+  try {
+    localStorage.setItem(
+      PDP_PLAYER_PREFIX + playerId,
+      JSON.stringify({ ...state, _savedAt: Date.now() })
+    );
+  } catch(e) { console.warn('Per-player save failed:', e); }
+}
+
+// Load a saved PDP for a CourtIQ player ID; returns the saved state or null
+function loadPlayerPDP(playerId) {
+  try {
+    const raw = localStorage.getItem(PDP_PLAYER_PREFIX + playerId);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+// Check if a player already has a saved PDP
+function playerHasPDP(playerId) {
+  return !!localStorage.getItem(PDP_PLAYER_PREFIX + String(playerId));
+}
+
+// ── Player load modal ────────────────────────────────────────────────────────
+function ciqOpenPlayerModal() {
+  _ciqSelectedPlayerId = null;
+  const loadBtn = document.getElementById('ciq-pm-load-btn');
+  if (loadBtn) loadBtn.disabled = true;
+  const noteEl = document.getElementById('ciq-pm-footer-note');
+  if (noteEl) noteEl.textContent = '';
+  const searchEl = document.getElementById('ciq-pm-search');
+  if (searchEl) searchEl.value = '';
+  renderCiqPlayerModal();
+  document.getElementById('ciq-player-modal').classList.add('open');
+}
+
+function ciqClosePlayerModal() {
+  document.getElementById('ciq-player-modal').classList.remove('open');
+}
+
+function renderCiqPlayerModal() {
+  const list = document.getElementById('ciq-pm-list');
+  if (!list) return;
+
+  const query = (document.getElementById('ciq-pm-search')?.value || '').toLowerCase();
+  const filtered = _ciqPlayers.filter(p =>
+    !query || (p.name||'').toLowerCase().includes(query)
+  );
+
+  if (!filtered.length) {
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:var(--text-dim);font-size:14px;">
+      ${_ciqPlayers.length ? 'No players match your search.' : 'No players in CourtIQ database.'}
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(p => {
+    const pid     = String(p.id);
+    const initials = (p.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const color   = p.color || '#1565c0';
+    const hasPDP  = playerHasPDP(pid);
+    const isLoaded = pid === String(_ciqLoadedPlayerId);
+    const sub     = [p.pos||p.position, p.num!==undefined?`#${p.num}`:null, p.grp].filter(Boolean).join(' · ');
+
+    const row = document.createElement('div');
+    row.className = 'ciq-pm-row' + (hasPDP ? ' has-pdp' : '') + (isLoaded ? ' selected' : '');
+    row.id = `ciq-pm-row-${pid}`;
+    row.innerHTML = `
+      <div class="ciq-pm-avatar" style="background:${color};">${initials}</div>
+      <div class="ciq-pm-info">
+        <div class="ciq-pm-name">${esc(p.name||'Unknown')}</div>
+        <div class="ciq-pm-sub">${esc(sub)}</div>
+      </div>
+      ${hasPDP ? '<span class="ciq-pm-pdp-tag">PDP Saved</span>' : ''}`;
+    row.addEventListener('click', () => ciqSelectPlayerModal(pid, hasPDP));
+    list.appendChild(row);
+  });
+}
+
+function ciqSelectPlayerModal(pid, hasPDP) {
+  _ciqSelectedPlayerId = pid;
+  document.querySelectorAll('.ciq-pm-row').forEach(r => r.classList.remove('selected'));
+  const row = document.getElementById(`ciq-pm-row-${pid}`);
+  if (row) row.classList.add('selected');
+
+  const loadBtn = document.getElementById('ciq-pm-load-btn');
+  if (loadBtn) loadBtn.disabled = false;
+
+  const noteEl = document.getElementById('ciq-pm-footer-note');
+  if (noteEl) {
+    noteEl.textContent = hasPDP
+      ? '✓ Existing PDP found — will be restored'
+      : 'New PDP — player info will be imported from CourtIQ';
+  }
+}
+
+// ── Load (or create) a player PDP ───────────────────────────────────────────
+function ciqLoadPlayer() {
+  if (!_ciqSelectedPlayerId) return;
+  const pid = String(_ciqSelectedPlayerId);
+  const p   = _ciqPlayers.find(x => String(x.id) === pid);
+  if (!p) return;
+
+  // Save any unsaved work for the currently loaded player first
+  if (_ciqLoadedPlayerId) {
+    savePlayerPDP(_ciqLoadedPlayerId);
+  }
+
+  const saved = loadPlayerPDP(pid);
+
+  if (saved) {
+    // ── RESTORE existing PDP ──
+    Object.assign(state, saved);
+    applyStateToUI();
+    renderAll();
+    renderAllPanels();
+    renderAllThemes();
+    renderAnalytics();
+    showCiqToast(`✓ ${p.name}'s PDP restored`);
+  } else {
+    // ── NEW PDP — pre-fill from CourtIQ player data ──
+    // Reset to blank slate first (keep vitamins structure, clear content)
+    state.playerName  = p.name || '';
+    state.teams       = p.grp  || '';
+    state.experience  = '';
+    state.otherSports = '';
+    state.photo       = '';
+
+    if (p.dob) {
+      const age = new Date().getFullYear() - new Date(p.dob).getFullYear();
+      if (!isNaN(age) && age > 0 && age < 100) state.experience = age + ' yrs old';
+    }
+
+    // Build introduction from CourtIQ fields
+    const parts = [];
+    if (p.pos) parts.push(`Position: ${p.pos}.`);
+    if (p.strengths && p.strengths.length)
+      parts.push('Strengths: ' + p.strengths.join(', ') + '.');
+    if (p.improve && p.improve.length)
+      parts.push('Areas for improvement: ' + p.improve.join(', ') + '.');
+    if (p.notes) parts.push(p.notes);
+    state.intro = parts.join(' ');
+
+    // Reset vitamins/analytics/goals/steps to defaults
+    state.teamVitamins  = [];
+    state.skillVitamins = [];
+    state.iqVitamins    = [];
+    state.teamThemes    = [];
+    state.skillThemes   = [];
+    state.iqThemes      = [];
+    state.teamAnalytics  = [];
+    state.skillAnalytics = [];
+    state.iqAnalytics    = [];
+    state.teamGoals  = [];
+    state.skillGoals = [];
+    state.iqGoals    = [];
+    state.teamSteps  = [];
+    state.skillSteps = [];
+    state.iqSteps    = [];
+    state.analytics  = [];
+    state.teamSectionTitle  = 'Team Vitamins';
+    state.skillSectionTitle = 'Skill Vitamins';
+    state.iqSectionTitle    = 'IQ Vitamins';
+
+    // Update photo
+    state.photo = '';
+    document.getElementById('player-photo').style.display = 'none';
+    document.getElementById('photo-placeholder').style.display = '';
+
+    applyStateToUI();
+    renderAll();
+    renderAllPanels();
+    renderAllThemes();
+    renderAnalytics();
+    showCiqToast(`✓ New PDP started for ${p.name}`);
+  }
+
+  // Track which player is loaded
+  _ciqLoadedPlayerId = pid;
+
+  // Update the header "loaded" indicator
+  const nameTag = document.getElementById('ciq-loaded-name');
+  if (nameTag) {
+    nameTag.textContent = `Editing: ${p.name}`;
+    nameTag.style.display = '';
+  }
+
+  // Persist the now-active player ID so reload remembers it
+  try { localStorage.setItem('pdp_active_player_id', pid); } catch(e){}
+
+  ciqClosePlayerModal();
+  markUnsaved();
+}
+
+// Helper — push state object values into the DOM inputs
+function applyStateToUI() {
+  document.getElementById('player-name').value  = state.playerName  || '';
+  document.getElementById('meta-teams').value   = state.teams       || '';
+  document.getElementById('meta-exp').value     = state.experience  || '';
+  document.getElementById('meta-sports').value  = state.otherSports || '';
+  document.getElementById('intro-text').value   = state.intro       || '';
+  const tst = document.getElementById('team-section-title');
+  if (tst) tst.value = state.teamSectionTitle  || 'Team Vitamins';
+  const sst = document.getElementById('skill-section-title');
+  if (sst) sst.value = state.skillSectionTitle || 'Skill Vitamins';
+  const ist = document.getElementById('iq-section-title');
+  if (ist) ist.value = state.iqSectionTitle    || 'IQ Vitamins';
+
+  if (state.photo) {
+    document.getElementById('player-photo').src          = state.photo;
+    document.getElementById('player-photo').style.display = 'block';
+    document.getElementById('photo-placeholder').style.display = 'none';
+  } else {
+    document.getElementById('player-photo').style.display = 'none';
+    document.getElementById('photo-placeholder').style.display  = '';
+  }
+}
+
+// ── Stat picker ──────────────────────────────────────────────────────────────
+function openStatPicker(section) {
+  _pickerTargetSection = section;
+  _pickerSelected = new Set();
+  renderStatPickerBody();
+  document.getElementById('stat-picker-overlay').classList.add('open');
+  updatePickerCount();
+}
+
+function closeStatPicker() {
+  document.getElementById('stat-picker-overlay').classList.remove('open');
+  _pickerSelected = new Set();
+  _pickerTargetSection = null;
+}
+
+function renderStatPickerBody() {
+  const body = document.getElementById('spm-body');
+  body.innerHTML = CIQ_CATEGORIES.map(cat => `
+    <div class="spm-cat">
+      <div class="spm-cat-title" style="background:${cat.color}18;color:${cat.color};">${esc(cat.name)}</div>
+      <div class="spm-stats-grid">
+        ${(cat.stats||[]).map(s => {
+          const pts = s.value > 0 ? `+${s.value}` : `${s.value}`;
+          return `<button class="spm-stat-btn" id="spm-btn-${cat.id}-${s.id}"
+            style="color:${cat.color};border-color:${cat.color}44;background:${cat.color}08;"
+            onclick="togglePickedStat('${cat.id}','${s.id}',${JSON.stringify(esc(s.name))},${s.value},'${cat.color}','${esc(cat.name)}')">
+            <span class="spm-stat-name">${esc(s.name)}</span>
+            <span class="spm-stat-pts">${pts} pts each</span>
+            <span class="spm-stat-check">✓</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function togglePickedStat(catId, statId, name, value, color, catName) {
+  const key = catId + '|' + statId + '|' + name + '|' + value + '|' + catName;
+  const btn = document.getElementById(`spm-btn-${catId}-${statId}`);
+  if (_pickerSelected.has(key)) {
+    _pickerSelected.delete(key);
+    if (btn) { btn.classList.remove('picked'); btn.style.background = color + '08'; }
+  } else {
+    _pickerSelected.add(key);
+    if (btn) { btn.classList.add('picked'); btn.style.background = color + '28'; btn.style.borderColor = color; }
+  }
+  updatePickerCount();
+}
+
+function updatePickerCount() {
+  const el = document.getElementById('spm-count');
+  if (el) el.textContent = `${_pickerSelected.size} stat${_pickerSelected.size===1?'':'s'} selected`;
+}
+
+function addPickedStats() {
+  if (!_pickerTargetSection || !_pickerSelected.size) { closeStatPicker(); return; }
+  if (!state[_pickerTargetSection + 'Analytics']) state[_pickerTargetSection + 'Analytics'] = [];
+  const arr = state[_pickerTargetSection + 'Analytics'];
+
+  _pickerSelected.forEach(key => {
+    const parts    = key.split('|');
+    const catId    = parts[0];
+    const statId   = parts[1];
+    const name     = parts[2];
+    const value    = parseFloat(parts[3]);
+    const catName  = parts[4];
+    const uniqueKey = catId + '_' + statId;
+    if (arr.find(a => a.statId === uniqueKey)) return;
+    arr.push({
+      metric:      name,
+      statId:      uniqueKey,
+      pointValue:  value,
+      sign:        value >= 0 ? '+' : '-',
+      value:       String(Math.abs(value)),
+      fromCourtIQ: true,
+      catName,
+      actualVal:   null,
+    });
+  });
+
+  state[_pickerTargetSection + 'Analytics'] = arr;
+  renderSecAnalytics(_pickerTargetSection);
+  markUnsaved();
+  closeStatPicker();
+  showCiqToast(`✓ ${_pickerSelected.size} stat${_pickerSelected.size===1?'':'s'} added`);
+}
+
+function ciqPopulateStatValues(playerId) {
+  if (!_ciqPlayers.length) return;
+  const p = _ciqPlayers.find(x => String(x.id) === String(playerId));
+  if (!p) return;
+  const sessions = p.sessions || [];
+  const totals = {};
+  sessions.forEach(s => {
+    Object.entries(s.statValues || s.stats || {}).forEach(([k,v]) => {
+      totals[k] = (totals[k]||0) + parseFloat(v||0);
+    });
+  });
+  if (!Object.keys(totals).length) return;
+  ['team','skill','iq'].forEach(t => {
+    (state[t+'Analytics']||[]).forEach(a => {
+      if (a.fromCourtIQ && a.statId && totals[a.statId] !== undefined)
+        a.actualVal = totals[a.statId];
+    });
+    renderSecAnalytics(t);
+  });
+}
+
+function showCiqToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#0d1b2a;color:#fff;padding:12px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 6px 24px rgba(0,0,0,.3);white-space:nowrap;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity='0', 2500);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════
+//  THEMES
+// ═══════════════════════════════════════════
+function renderThemes(type) {
+  const list = document.getElementById(`${type}-themes-list`); list.innerHTML = '';
+  (state[type+'Themes']||[]).forEach((t, i) => {
+    const chip = document.createElement('div'); chip.className = 'theme-chip';
+    chip.innerHTML = `<input placeholder="Theme..." value="${esc(t)}" oninput="themChg(this,'${type}',${i})">
+      <button class="theme-del" onclick="delThem('${type}',${i})">✕</button>`;
+    list.appendChild(chip);
+  });
+  const add = document.createElement('button'); add.className = 'add-theme-btn';
+  add.innerHTML = `<svg fill="none" viewBox="0 0 24 24" stroke="currentColor" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add Theme`;
+  add.onclick = () => addThem(type); list.appendChild(add);
+}
+function addThem(type) { state[type+'Themes'].push(''); renderThemes(type); markUnsaved(); }
+function themChg(el, type, i) { state[type+'Themes'][i] = el.value; markUnsaved(); }
+function delThem(type, i) { state[type+'Themes'].splice(i,1); renderThemes(type); markUnsaved(); }
+function renderAllThemes() { ['team','skill','iq'].forEach(renderThemes); }
+
+// ═══════════════════════════════════════════
+//  ANALYTICS
+// ═══════════════════════════════════════════
+function renderAnalytics() {
+  const list = document.getElementById('analytics-list'); list.innerHTML = '';
+  state.analytics.forEach((a, i) => {
+    const row = document.createElement('div'); row.className = 'analytics-row';
+    row.innerHTML = `
+      <span class="drag-handle"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg></span>
+      <input class="analytics-metric-input" placeholder="Metric name & description..." value="${esc(a.metric||'')}" oninput="analChg(this,${i},'metric')">
+      <div class="analytics-sign">
+        <button class="sign-btn positive ${a.sign==='+'?'active':''}" onclick="togSign(${i},'+')">+</button>
+        <button class="sign-btn negative ${a.sign==='-'?'active':''}" onclick="togSign(${i},'-')">−</button>
+      </div>
+      <input class="analytics-value" type="number" placeholder="Pts" value="${a.value||''}" oninput="analChg(this,${i},'value')">
+      <button class="delete-item-btn" onclick="delAnal(${i})">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>`;
+    list.appendChild(row);
+  });
+}
+function analChg(el, i, fld) { state.analytics[i][fld] = el.value; markUnsaved(); }
+function togSign(i, sign) { state.analytics[i].sign = state.analytics[i].sign===sign ? '' : sign; renderAnalytics(); markUnsaved(); }
+function delAnal(i) { state.analytics.splice(i,1); renderAnalytics(); markUnsaved(); }
+
+// ═══════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════
+let saveTimer;
+function markUnsaved() {
+  const el = document.getElementById('save-status');
+  el.textContent = 'Unsaved changes'; el.className = 'save-status';
+  clearTimeout(saveTimer); saveTimer = setTimeout(saveData, 2500);
+}
+function collectState() {
+  state.playerName  = document.getElementById('player-name').value;
+  state.teams       = document.getElementById('meta-teams').value;
+  state.experience  = document.getElementById('meta-exp').value;
+  state.otherSports = document.getElementById('meta-sports').value;
+  state.intro       = document.getElementById('intro-text').value;
+}
+function saveData() {
+  collectState();
+  try {
+    // Always save global state
+    localStorage.setItem('pdp_magic_v7', JSON.stringify(state));
+    // Also save per-player record if a CourtIQ player is loaded
+    if (_ciqLoadedPlayerId) savePlayerPDP(_ciqLoadedPlayerId);
+    const el = document.getElementById('save-status');
+    el.textContent = '✓ Saved'; el.className = 'save-status saved';
+    setTimeout(() => { el.textContent = 'Auto-saved locally'; el.className = 'save-status'; }, 2000);
+  } catch(e) { console.error('Save failed', e); }
+}
+function loadData() {
+  try {
+    // Check if there was an active CourtIQ player — restore their PDP if so
+    const activePid = localStorage.getItem('pdp_active_player_id');
+    if (activePid) {
+      const playerSaved = loadPlayerPDP(activePid);
+      if (playerSaved) {
+        Object.assign(state, playerSaved);
+        applyStateToUI();
+        _ciqLoadedPlayerId = activePid;
+        // Show the loaded-name tag (player name may not be synced yet, just show PID hint)
+        const nameTag = document.getElementById('ciq-loaded-name');
+        if (nameTag && state.playerName) {
+          nameTag.textContent = `Editing: ${state.playerName}`;
+          nameTag.style.display = '';
+        }
+        return;
+      }
+    }
+    // Fallback: load global state
+    const raw = localStorage.getItem('pdp_magic_v7');
+    if (!raw) return initDefaults();
+    Object.assign(state, JSON.parse(raw));
+    applyStateToUI();
+  } catch(e) { initDefaults(); }
+}
+function initDefaults() {
+  state.teamVitamins  = [
+    { name:'Driving', notes:'Focus on driving through and with contact.', subitems:[], links:['https://youtu.be/fe72HbXpiHw','https://www.instagram.com/p/DXHWB7YDeRB/'], open:true },
+    { name:'Spacing', notes:'', subitems:[], links:[], open:false },
+    { name:'Rebounding', notes:'', subitems:[], links:[], open:false },
+    { name:'50/50s', notes:'', subitems:[], links:[], open:false },
+  ];
+  state.skillVitamins = [
+    { name:'Shooting', notes:'Ball to hip, shoot high, hold finish until ball lands. Shoot over backboard to force arc on shot.', subitems:[], links:[], open:true },
+  ];
+  state.iqVitamins    = [
+    { name:'Schemes', notes:'Offensive and defensive schemes.',
+      subitems:[{ text:'Horns', notes:'', links:['https://youtu.be/x0eilYyliVk?si=xSL21kD-ijEeKtYT&t=647','https://youtu.be/Cva0AB_hPFE'] }],
+      links:[], open:true },
+  ];
+  state.teamThemes  = ['Be physical and proactive'];
+  state.skillThemes = ['Score!', 'Thrive under pressure', 'Control the game'];
+  state.iqThemes    = ['Score!', 'Thrive under pressure', 'Control the game'];
+  state.analytics = [
+    { metric:'Fouls', sign:'-', value:'1' },
+    { metric:'Points + Assists / Contribution (a point per point)', sign:'+', value:'1' },
+    { metric:'Press Break +5', sign:'+', value:'5' },
+    { metric:'Picking up dribble or passing too soon', sign:'-', value:'2' },
+  ];
+  state.teamAnalytics  = [{ metric:'Drives to rim', sign:'+', value:'' }];
+  state.skillAnalytics = [{ metric:'Made shots', sign:'+', value:'' }];
+  state.iqAnalytics    = [{ metric:'Correct reads', sign:'+', value:'' }];
+  state.teamGoals  = ['Dominate 50/50 balls every possession'];
+  state.skillGoals = ['Shoot 60% at the rim'];
+  state.iqGoals    = ['Execute Horns set correctly'];
+  state.teamSteps  = [{ text:'Review drive clips weekly', done:false }];
+  state.skillSteps = [{ text:'Daily shooting routine — 200 makes', done:false }];
+  state.iqSteps    = [{ text:'Watch film on Horns set', done:false }];
+}
+
+// ═══════════════════════════════════════════
+//  EXPORT MODAL
+// ═══════════════════════════════════════════
+function showExportModal() { collectState(); document.getElementById('export-modal').classList.add('open'); }
+function closeExportModal() { document.getElementById('export-modal').classList.remove('open'); }
+
+// ═══════════════════════════════════════════
+//  PDF EXPORT
+// ═══════════════════════════════════════════
+function exportPDF() {
+  closeExportModal();
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'letter' });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const contentW = W - margin * 2;
+  let y = margin;
+
+  // Colors
+  const BLUE = [0, 119, 192];
+  const BLACK = [6, 25, 42];
+  const SILVER = [196, 206, 212];
+  const GRAY = [109, 132, 148];
+  const WHITE = [255, 255, 255];
+  const LIGHT = [244, 246, 248];
+
+  function checkPage(needed) {
+    if (y + needed > H - margin) { doc.addPage(); y = margin; return true; }
+    return false;
+  }
+
+  function drawHeader() {
+    // Dark header band
+    doc.setFillColor(...BLACK);
+    doc.rect(0, 0, W, 90, 'F');
+    // Blue accent line at bottom of header
+    doc.setFillColor(...BLUE);
+    doc.rect(0, 88, W, 3, 'F');
+    // Title
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(28);
+    const name = state.playerName || 'Player Development Plan';
+    doc.text(name.toUpperCase(), margin, 44);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(...SILVER);
+    doc.text('PLAYER DEVELOPMENT PLAN', margin, 58);
+    // Meta row
+    const metaParts = [];
+    if (state.teams) metaParts.push('Teams: ' + state.teams);
+    if (state.experience) metaParts.push('Experience: ' + state.experience);
+    if (state.otherSports) metaParts.push('Other Sports: ' + state.otherSports);
+    if (metaParts.length) {
+      doc.setFontSize(8); doc.setTextColor(...SILVER);
+      doc.text(metaParts.join('   •   '), margin, 76);
+    }
+    y = 110;
+  }
+
+  function sectionHeading(label, title) {
+    checkPage(40);
+    // Badge
+    doc.setFillColor(...BLUE);
+    doc.roundedRect(margin, y, 52, 18, 2, 2, 'F');
+    doc.setTextColor(...WHITE);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(label.toUpperCase(), margin + 4, y + 12);
+    // Title text
+    doc.setFillColor(...LIGHT);
+    doc.roundedRect(margin + 56, y, contentW - 56, 18, 2, 2, 'F');
+    doc.setTextColor(...BLACK);
+    doc.setFontSize(14);
+    doc.text(title.toUpperCase(), margin + 64, y + 13);
+    y += 26;
+  }
+
+  function vitaminBlock(type, label, title) {
+    checkPage(50);
+    sectionHeading(label, title);
+    const vitamins = getV(type);
+    if (!vitamins.length) { y += 8; return; }
+
+    vitamins.forEach(v => {
+      checkPage(60);
+      // Vitamin header bar
+      const colors = { team: BLUE, skill: [0,90,148], iq: [154,171,179] };
+      const col = colors[type] || BLUE;
+      doc.setFillColor(...col);
+      doc.rect(margin, y, 4, 22, 'F');
+      doc.setFillColor(...LIGHT);
+      doc.rect(margin + 4, y, contentW - 4, 22, 'F');
+      doc.setTextColor(...BLACK);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.text((v.name || 'Untitled').toUpperCase(), margin + 14, y + 15);
+      y += 28;
+
+      if (v.notes) {
+        checkPage(30);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(...GRAY);
+        const lines = doc.splitTextToSize(v.notes, contentW - 16);
+        doc.text(lines, margin + 12, y);
+        y += lines.length * 13 + 6;
+      }
+
+      if (v.links && v.links.length) {
+        checkPage(20);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(...BLUE);
+        v.links.filter(l=>l).forEach(lk => {
+          checkPage(14);
+          const display = lk.length > 72 ? lk.substring(0,69)+'...' : lk;
+          doc.text('🔗 ' + display, margin + 12, y);
+          y += 13;
+        });
+        y += 2;
+      }
+
+      if (v.subitems && v.subitems.length) {
+        v.subitems.forEach(si => {
+          const subText  = typeof si === 'string' ? si : (si.text  || '');
+          const subNotes = typeof si === 'object'  ? (si.notes || '') : '';
+          const subLinks = typeof si === 'object'  ? (si.links || []) : [];
+          if (!subText && !subNotes && !subLinks.length) return;
+
+          checkPage(16);
+          doc.setFillColor(...BLUE);
+          doc.circle(margin + 18, y - 3, 2, 'F');
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(...BLACK);
+          doc.text(subText || '—', margin + 26, y);
+          y += 14;
+
+          if (subNotes) {
+            checkPage(14);
+            const subLines = doc.splitTextToSize(subNotes, contentW - 36);
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(9);
+            doc.setTextColor(...GRAY);
+            doc.text(subLines, margin + 32, y);
+            y += subLines.length * 12 + 4;
+          }
+
+          subLinks.filter(l=>l).forEach(lk => {
+            checkPage(13);
+            const display = lk.length > 68 ? lk.substring(0,65)+'...' : lk;
+            doc.setFont('helvetica', 'italic');
+            doc.setFontSize(8);
+            doc.setTextColor(...BLUE);
+            doc.text('🔗 ' + display, margin + 32, y);
+            y += 12;
+          });
+          y += 2;
+        });
+        y += 4;
+      }
+
+      y += 8;
+    });
+
+    // Themes
+    const themes = state[type+'Themes'];
+    if (themes && themes.length) {
+      checkPage(30);
+      doc.setFillColor(...BLUE);
+      doc.roundedRect(margin, y, contentW, 22, 3, 3, 'F');
+      doc.setTextColor(...WHITE);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('THEMES', margin + 8, y + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(themes.filter(t=>t).join('  ·  '), margin + 8, y + 18);
+      y += 30;
+    }
+    y += 12;
+  }
+
+  // ── BUILD PDF ──
+  drawHeader();
+
+  // Intro
+  if (state.intro) {
+    checkPage(50);
+    sectionHeading('Profile', 'Introduction');
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...GRAY);
+    const lines = doc.splitTextToSize(state.intro, contentW - 8);
+    lines.forEach(line => { checkPage(14); doc.text(line, margin + 4, y); y += 13; });
+    y += 16;
+  }
+
+  vitaminBlock('team',  'Team',  'Team Vitamins');
+  vitaminBlock('skill', 'Skill', 'Skill Vitamins');
+  vitaminBlock('iq',    'IQ',    'IQ Vitamins');
+
+  // Analytics
+  if (state.analytics.length) {
+    checkPage(50);
+    sectionHeading('Data', 'Analytics');
+    state.analytics.forEach(a => {
+      checkPage(22);
+      const isPos = a.sign === '+';
+      const isNeg = a.sign === '-';
+      // row bg
+      doc.setFillColor(...LIGHT);
+      doc.roundedRect(margin, y, contentW, 18, 2, 2, 'F');
+      // sign badge
+      if (isPos) { doc.setFillColor(26,138,74); doc.setTextColor(...WHITE); }
+      else if (isNeg) { doc.setFillColor(192,57,43); doc.setTextColor(...WHITE); }
+      else { doc.setFillColor(...SILVER); doc.setTextColor(...BLACK); }
+      doc.roundedRect(margin + 4, y + 3, 18, 12, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      doc.text(a.sign||'·', margin + 8, y + 13);
+      // metric
+      doc.setTextColor(...BLACK); doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+      doc.text(a.metric || '', margin + 28, y + 13);
+      // value
+      if (a.value) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.setTextColor(...BLUE);
+        doc.text(String(a.value) + ' pts', W - margin - 40, y + 13);
+      }
+      y += 22;
+    });
+  }
+
+  // Footer
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFillColor(...LIGHT);
+    doc.rect(0, H - 28, W, 28, 'F');
+    doc.setFillColor(...BLUE);
+    doc.rect(0, H - 28, W, 2, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GRAY);
+    doc.text('Player Development Plan', margin, H - 10);
+    doc.text(`Page ${p} of ${pageCount}`, W - margin - 50, H - 10);
+  }
+
+  const fname = (state.playerName || 'PDP').replace(/\s+/g,'_');
+  doc.save(`${fname}_Development_Plan.pdf`);
+}
+
+// ═══════════════════════════════════════════
+//  WORD EXPORT
+// ═══════════════════════════════════════════
+async function exportWord() {
+  closeExportModal();
+  try {
+    const {
+      Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+      AlignmentType, HeadingLevel, BorderStyle, WidthType, ShadingType,
+      VerticalAlign, LevelFormat, ExternalHyperlink
+    } = docx;
+
+    const MAGIC_BLUE = '0077C0';
+    const MAGIC_BLACK = '06192A';
+    const SILVER = 'C4CED4';
+    const LIGHT_BG = 'F4F6F8';
+    const border = { style: BorderStyle.SINGLE, size: 1, color: 'E0E6EA' };
+    const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const borders = { top: border, bottom: border, left: border, right: border };
+    const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+    function heading(text, level, color) {
+      return new Paragraph({
+        children: [new TextRun({ text: text.toUpperCase(), bold: true, color: color||MAGIC_BLACK, size: level===1?32:24, font:'Arial' })],
+        spacing: { before: level===1?360:240, after: 120 },
+        border: level===1 ? { bottom: { style: BorderStyle.SINGLE, size: 6, color: MAGIC_BLUE, space: 4 } } : undefined
+      });
+    }
+
+    function bodyText(text) {
+      return new Paragraph({
+        children: [new TextRun({ text, color: '3d5a6b', size: 22, font:'Arial' })],
+        spacing: { before: 60, after: 60 }
+      });
+    }
+
+    function sectionLabel(label, title) {
+      return [
+        new Paragraph({
+          children: [
+            new TextRun({ text: ' ' + label.toUpperCase() + ' ', bold: true, color: 'FFFFFF', size: 18, font:'Arial', highlight: undefined }),
+            new TextRun({ text: '  ' + title.toUpperCase(), bold: true, color: MAGIC_BLACK, size: 24, font:'Arial' }),
+          ],
+          spacing: { before: 360, after: 160 },
+          shading: { type: ShadingType.CLEAR, fill: 'FFFFFF' }
+        })
+      ];
+    }
+
+    function vitaminSection(type, label, title) {
+      const paras = [...sectionLabel(label, title)];
+      const vitamins = getV(type);
+      const barColor = type==='team' ? MAGIC_BLUE : type==='skill' ? '005A94' : '9AABB3';
+
+      vitamins.forEach(v => {
+        // Vitamin title row
+        paras.push(new Paragraph({
+          children: [new TextRun({ text: (v.name||'Untitled').toUpperCase(), bold: true, color: 'FFFFFF', size: 24, font:'Arial' })],
+          spacing: { before: 200, after: 80 },
+          shading: { type: ShadingType.CLEAR, fill: barColor },
+          indent: { left: 160 }
+        }));
+
+        if (v.notes) {
+          paras.push(new Paragraph({
+            children: [new TextRun({ text: v.notes, italics: true, color: '4a6070', size: 20, font:'Arial' })],
+            spacing: { before: 60, after: 60 }, indent: { left: 160 }
+          }));
+        }
+
+        (v.links||[]).filter(l=>l).forEach(lk => {
+          paras.push(new Paragraph({
+            children: [
+              new TextRun({ text: '🔗 ', size: 18, font:'Arial' }),
+              new ExternalHyperlink({ link: lk.startsWith('http') ? lk : 'https://'+lk,
+                children: [new TextRun({ text: lk, style: 'Hyperlink', size: 18, font:'Arial', color: MAGIC_BLUE })] })
+            ],
+            spacing: { before: 40, after: 40 }, indent: { left: 160 }
+          }));
+        });
+
+        (v.subitems||[]).forEach(si => {
+          const subText  = typeof si === 'string' ? si : (si.text  || '');
+          const subNotes = typeof si === 'object'  ? (si.notes || '') : '';
+          const subLinks = typeof si === 'object'  ? (si.links || []) : [];
+
+          paras.push(new Paragraph({
+            children: [new TextRun({ text: subText || '—', bold: true, size: 20, font:'Arial', color: MAGIC_BLACK })],
+            bullet: { level: 0 },
+            indent: { left: 320 }, spacing: { before: 60, after: 20 }
+          }));
+
+          if (subNotes) {
+            paras.push(new Paragraph({
+              children: [new TextRun({ text: subNotes, italics: true, color: '4a6070', size: 18, font:'Arial' })],
+              spacing: { before: 20, after: 20 }, indent: { left: 480 }
+            }));
+          }
+
+          subLinks.filter(l=>l).forEach(lk => {
+            paras.push(new Paragraph({
+              children: [
+                new TextRun({ text: '🔗 ', size: 16, font:'Arial' }),
+                new ExternalHyperlink({ link: lk.startsWith('http') ? lk : 'https://'+lk,
+                  children: [new TextRun({ text: lk, style: 'Hyperlink', size: 16, font:'Arial', color: MAGIC_BLUE })] })
+              ],
+              spacing: { before: 20, after: 20 }, indent: { left: 480 }
+            }));
+          });
+        });
+      });
+
+      const themes = state[type+'Themes'];
+      if (themes && themes.filter(t=>t).length) {
+        paras.push(new Paragraph({
+          children: [
+            new TextRun({ text: 'THEMES   ', bold: true, color: 'FFFFFF', size: 17, font:'Arial' }),
+            new TextRun({ text: themes.filter(t=>t).join('  ·  '), color: 'FFFFFF', size: 18, font:'Arial' }),
+          ],
+          spacing: { before: 180, after: 60 },
+          shading: { type: ShadingType.CLEAR, fill: MAGIC_BLUE },
+          indent: { left: 80, right: 80 }
+        }));
+      }
+      return paras;
+    }
+
+    const children = [
+      // Player name
+      new Paragraph({
+        children: [new TextRun({ text: (state.playerName||'Player Development Plan').toUpperCase(), bold: true, color: MAGIC_BLACK, size: 52, font:'Arial' })],
+        spacing: { before: 0, after: 120 },
+        border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: MAGIC_BLUE, space: 6 } }
+      }),
+    ];
+
+    // Meta
+    const metaParts = [];
+    if (state.teams) metaParts.push(`Teams: ${state.teams}`);
+    if (state.experience) metaParts.push(`Experience: ${state.experience}`);
+    if (state.otherSports) metaParts.push(`Other Sports: ${state.otherSports}`);
+    if (metaParts.length) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: metaParts.join('   •   '), color: '6b8494', size: 18, font:'Arial' })],
+        spacing: { before: 80, after: 200 }
+      }));
+    }
+
+    // Introduction
+    if (state.intro) {
+      children.push(...sectionLabel('Profile', 'Introduction'));
+      children.push(new Paragraph({
+        children: [new TextRun({ text: state.intro, size: 22, color: '2d4a5f', font:'Arial' })],
+        spacing: { before: 80, after: 80 }
+      }));
+    }
+
+    // Vitamins
+    children.push(...vitaminSection('team',  'Team',  'Team Vitamins'));
+    children.push(...vitaminSection('skill', 'Skill', 'Skill Vitamins'));
+    children.push(...vitaminSection('iq',    'IQ',    'IQ Vitamins'));
+
+    // Analytics
+    if (state.analytics.length) {
+      children.push(...sectionLabel('Data', 'Analytics'));
+      state.analytics.forEach(a => {
+        const signColor = a.sign==='+' ? '1a8a4a' : a.sign==='-' ? 'c0392b' : '6b8494';
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: ` ${a.sign||'·'} `, bold: true, color: 'FFFFFF', size: 20, font:'Arial', shading: { type: ShadingType.CLEAR, fill: signColor } }),
+            new TextRun({ text: `  ${a.metric||''}`, size: 20, color: MAGIC_BLACK, font:'Arial' }),
+            ...(a.value ? [new TextRun({ text: `   ${a.value} pts`, bold: true, color: MAGIC_BLUE, size: 20, font:'Arial' })] : []),
+          ],
+          spacing: { before: 80, after: 80 },
+          shading: { type: ShadingType.CLEAR, fill: LIGHT_BG },
+          indent: { left: 80, right: 80 }
+        }));
+      });
+    }
+
+    const doc2 = new Document({
+      sections: [{
+        properties: {
+          page: { size: { width: 12240, height: 15840 }, margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 } }
+        },
+        children
+      }]
+    });
+
+    const buf = await Packer.toBlob(doc2);
+    const url = URL.createObjectURL(buf);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${(state.playerName||'PDP').replace(/\s+/g,'_')}_Development_Plan.docx`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    console.error('Word export failed:', e);
+    alert('Word export failed. Please try PDF instead.\n\nError: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════
+//  GOOGLE DOC EXPORT
+// ═══════════════════════════════════════════
+function exportGoogleDoc() {
+  closeExportModal();
+  collectState();
+
+  // Build a clean HTML document to paste into Google Docs
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 { color: #06192A; font-size: 32px; border-bottom: 4px solid #0077C0; padding-bottom: 8px; }
+    .meta { color: #6b8494; font-size: 14px; margin-bottom: 24px; }
+    .section-label { background: #0077C0; color: white; padding: 3px 10px; font-size: 11px; font-weight: bold; letter-spacing: 2px; display: inline-block; border-radius: 3px; }
+    h2 { color: #06192A; font-size: 22px; margin-top: 32px; }
+    .vitamin-title { background: #0077C0; color: white; padding: 6px 14px; font-weight: bold; font-size: 16px; margin: 16px 0 8px; }
+    .notes { color: #4a6070; font-style: italic; margin-left: 14px; }
+    .link { margin-left: 14px; font-size: 13px; }
+    .sub-block { border-left: 3px solid #0077C0; margin: 10px 0 10px 14px; padding: 6px 10px 8px; background: #f8fafb; }
+    .sub-title { font-weight: bold; color: #06192A; margin-bottom: 4px; }
+    .sub-notes { color: #4a6070; font-style: italic; font-size: 13px; margin: 4px 0; }
+    .sub-link { font-size: 12px; margin: 3px 0; }
+    .themes { background: #0077C0; color: white; padding: 10px 16px; border-radius: 6px; margin-top: 16px; }
+    .themes-label { font-size: 10px; letter-spacing: 2px; opacity: .7; }
+    .metric-row { background: #f4f6f8; padding: 8px 12px; margin-bottom: 6px; }
+    .pos { color: #1a8a4a; font-weight: bold; }
+    .neg { color: #c0392b; font-weight: bold; }
+    hr { border: none; border-top: 1px solid #C4CED4; margin: 28px 0; }
+  </style></head><body>`;
+
+  html += `<h1>${esc2(state.playerName || 'Player Development Plan')}</h1>`;
+
+  const meta = [];
+  if (state.teams) meta.push(`<strong>Teams:</strong> ${esc2(state.teams)}`);
+  if (state.experience) meta.push(`<strong>Experience:</strong> ${esc2(state.experience)}`);
+  if (state.otherSports) meta.push(`<strong>Other Sports:</strong> ${esc2(state.otherSports)}`);
+  if (meta.length) html += `<div class="meta">${meta.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>`;
+
+  if (state.intro) {
+    html += `<hr><span class="section-label">PROFILE</span><h2>Introduction</h2><p>${esc2(state.intro)}</p>`;
+  }
+
+  function vitHtml(type, label, title) {
+    let s = `<hr><span class="section-label">${label.toUpperCase()}</span><h2>${esc2(title)}</h2>`;
+    getV(type).forEach(v => {
+      s += `<div class="vitamin-title">${esc2(v.name||'Untitled')}</div>`;
+      if (v.notes) s += `<p class="notes">${esc2(v.notes)}</p>`;
+      (v.links||[]).filter(x=>x).forEach(lk => {
+        const url = lk.startsWith('http') ? lk : 'https://'+lk;
+        s += `<p class="link">🔗 <a href="${url}">${esc2(lk)}</a></p>`;
+      });
+      (v.subitems||[]).forEach(si => {
+        const subText  = typeof si === 'string' ? si : (si.text  || '');
+        const subNotes = typeof si === 'object'  ? (si.notes || '') : '';
+        const subLinks = typeof si === 'object'  ? (si.links || []) : [];
+        s += `<div class="sub-block"><div class="sub-title">› ${esc2(subText)}</div>`;
+        if (subNotes) s += `<div class="sub-notes">${esc2(subNotes)}</div>`;
+        subLinks.filter(l=>l).forEach(lk => {
+          const url = lk.startsWith('http') ? lk : 'https://'+lk;
+          s += `<div class="sub-link">🔗 <a href="${url}">${esc2(lk)}</a></div>`;
+        });
+        s += `</div>`;
+      });
+    });
+    const themes = state[type+'Themes'].filter(t=>t);
+    if (themes.length) {
+      s += `<div class="themes"><div class="themes-label">THEMES</div><div>${themes.map(esc2).join(' · ')}</div></div>`;
+    }
+    return s;
+  }
+
+  html += vitHtml('team',  'Team',  'Team Vitamins');
+  html += vitHtml('skill', 'Skill', 'Skill Vitamins');
+  html += vitHtml('iq',    'IQ',    'IQ Vitamins');
+
+  if (state.analytics.length) {
+    html += `<hr><span class="section-label">DATA</span><h2>Analytics</h2>`;
+    state.analytics.forEach(a => {
+      const cls = a.sign==='+' ? 'pos' : a.sign==='-' ? 'neg' : '';
+      html += `<div class="metric-row"><span class="${cls}">${a.sign||'·'}</span> ${esc2(a.metric||'')}${a.value ? ` &nbsp;<strong>${esc2(a.value)} pts</strong>` : ''}</div>`;
+    });
+  }
+
+  html += `</body></html>`;
+
+  // Download as .html, then instruct user to open in Google Docs
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fname = `${(state.playerName||'PDP').replace(/\s+/g,'_')}_Development_Plan.html`;
+  a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  // Brief instruction toast
+  showToast('HTML file downloaded! Open Google Drive → New → File upload → then open with Google Docs.');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
+    background:#06192A;color:#fff;padding:14px 24px;border-radius:10px;
+    font-size:13px;z-index:9999;max-width:500px;text-align:center;
+    box-shadow:0 8px 32px rgba(0,0,0,0.3);line-height:1.5;`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 6000);
+}
+
+// ═══════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function esc2(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ═══════════════════════════════════════════
+//  WIRE BUTTONS & INIT
+// ═══════════════════════════════════════════
+document.getElementById('add-team-vitamin').addEventListener('click',  () => addVit('team'));
+document.getElementById('add-skill-vitamin').addEventListener('click', () => addVit('skill'));
+document.getElementById('add-iq-vitamin').addEventListener('click',    () => addVit('iq'));
+document.getElementById('add-analytics').addEventListener('click', () => {
+  state.analytics.push({ metric:'', sign:'+', value:'' });
+  renderAnalytics(); markUnsaved();
+});
+
+loadData();
+renderAll();
+renderAllThemes();
+renderAnalytics();
+</script>
+</body>
+</html>
