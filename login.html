@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In – Better Athlete Plan</title>
+
+  <!-- Supabase JS (must load before auth.js) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <!-- BAP Auth Middleware -->
+  <script src="auth.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange:   #ff8c00;
+      --orange-d: #e07800;
+      --bg:       #080810;
+      --bg2:      #0f0f1c;
+      --surface:  #13131f;
+      --border:   rgba(255,140,0,.18);
+      --text:     #e8e8f0;
+      --muted:    #7878a0;
+      --error:    #ff4d6a;
+      --success:  #00d68f;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* ── BACKGROUND ── */
+    .bg-grid {
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,140,0,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,140,0,.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 0%, rgba(255,140,0,.12), transparent 70%);
+    }
+    .bg-ball {
+      position: fixed; bottom: -120px; right: -80px; z-index: 0;
+      width: 420px; height: 420px; border-radius: 50%;
+      border: 2px solid rgba(255,140,0,.08);
+      box-shadow: inset 0 0 80px rgba(255,140,0,.05);
+      opacity: .5;
+    }
+    .bg-ball::before {
+      content: '';
+      position: absolute; inset: 30px; border-radius: 50%;
+      border: 1px solid rgba(255,140,0,.06);
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative; z-index: 1;
+      width: min(420px, 92vw);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 44px 40px 40px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,140,0,.06) inset;
+      animation: cardIn .5s cubic-bezier(.22,1,.36,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── LOGO ── */
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 15px; letter-spacing: .02em;
+      color: var(--text);
+    }
+    .logo-text span { color: var(--orange); }
+
+    /* ── HEADINGS ── */
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px; font-weight: 800;
+      line-height: 1.15; margin-bottom: 6px;
+    }
+    .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex; border-radius: 10px;
+      background: var(--bg2); padding: 4px;
+      margin-bottom: 28px;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px 0; border: none; border-radius: 7px;
+      background: transparent; color: var(--muted);
+      font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all .2s;
+    }
+    .tab-btn.active {
+      background: var(--orange); color: #000;
+    }
+
+    /* ── FORM ── */
+    .form-group { margin-bottom: 16px; }
+    label {
+      display: block; font-size: 12px; font-weight: 500;
+      color: var(--muted); letter-spacing: .05em;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      transition: border .2s, box-shadow .2s; outline: none;
+    }
+    input:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(255,140,0,.12);
+    }
+    input::placeholder { color: #3a3a5a; }
+
+    /* ── PASSWORD TOGGLE ── */
+    .pw-wrap { position: relative; }
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      font-size: 14px; padding: 4px;
+    }
+
+    /* ── SUBMIT ── */
+    .btn-primary {
+      width: 100%; padding: 13px;
+      background: var(--orange); color: #000;
+      border: none; border-radius: 10px;
+      font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: background .2s, transform .1s;
+      margin-top: 8px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: var(--orange-d); }
+    .btn-primary:active { transform: scale(.98); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── ALERT ── */
+    .alert {
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; margin-bottom: 16px; display: none;
+    }
+    .alert.error   { background: rgba(255,77,106,.12); border: 1px solid rgba(255,77,106,.3); color: #ff7d96; display: block; }
+    .alert.success { background: rgba(0,214,143,.12); border: 1px solid rgba(0,214,143,.3); color: #00d68f; display: block; }
+
+    /* ── SPINNER ── */
+    .spinner {
+      width: 16px; height: 16px; border: 2px solid rgba(0,0,0,.3);
+      border-top-color: #000; border-radius: 50%;
+      animation: spin .7s linear infinite; display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DIVIDER ── */
+    .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .divider span { color: var(--muted); font-size: 12px; }
+
+    /* ── FORGOT / BACK ── */
+    .link-btn {
+      background: none; border: none; color: var(--orange);
+      font-size: 13px; cursor: pointer; padding: 0;
+      text-decoration: underline; text-underline-offset: 2px;
+    }
+    .forgot-row { text-align: right; margin-top: -8px; margin-bottom: 16px; }
+
+    /* ── PANEL TOGGLE ── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-ball"></div>
+
+  <div class="card">
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-icon">🏀</div>
+      <div class="logo-text">Better.<span>Athlete</span></div>
+    </div>
+
+    <h1>Welcome back, Coach</h1>
+    <p class="subtitle">Sign in to access your tools and athlete data.</p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="signin">Sign In</button>
+      <button class="tab-btn" data-tab="signup">Create Account</button>
+    </div>
+
+    <!-- Alert -->
+    <div class="alert" id="alert"></div>
+
+    <!-- ── SIGN IN PANEL ── -->
+    <div class="panel active" id="panel-signin">
+      <div class="form-group">
+        <label for="si-email">Email</label>
+        <input type="email" id="si-email" placeholder="coach@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="si-password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="si-password" placeholder="••••••••" autocomplete="current-password" />
+          <button class="pw-toggle" data-target="si-password" type="button" aria-label="Toggle password">👁</button>
+        </div>
+      </div>
+      <div class="forgot-row">
+        <button class="link-btn" id="forgot-btn">Forgot password?</button>
+      </div>
+      <button class="btn-primary" id="signin-btn">
+        <span class="spinner" id="signin-spinner"></span>
+        <span id="signin-label">Sign In</span>
+      </button>
+    </div>
+
+    <!-- ── SIGN UP PANEL ── -->
+    <div class="panel" id="panel-signup">
+      <div class="form-group">
+        <label for="su-name">Full Name</label>
+        <input type="text" id="su-name" placeholder="Your name" autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label for="su-email">Email</label>
+        <input type="email" id="su-email" placeholder="coach@example.com" autocomplete="email" />
+      </div>
+      <div class="form-group">
+        <label for="su-password">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="su-password" placeholder="Min. 8 characters" autocomplete="new-password" />
+          <button class="pw-toggle" data-target="su-password" type="button" aria-label="Toggle password">👁</button>
+        </div>
+      </div>
+      <button class="btn-primary" id="signup-btn">
+        <span class="spinner" id="signup-spinner"></span>
+        <span id="signup-label">Create Account</span>
+      </button>
+      <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:12px;">
+        New accounts are created as <strong style="color:var(--text);">User</strong> role.<br>
+        Admins are provisioned by your organisation.
+      </p>
+    </div>
+
+    <!-- ── FORGOT PASSWORD PANEL ── -->
+    <div class="panel" id="panel-forgot">
+      <p style="color:var(--muted);font-size:14px;margin-bottom:20px;">
+        Enter your email and we'll send a reset link.
+      </p>
+      <div class="form-group">
+        <label for="reset-email">Email</label>
+        <input type="email" id="reset-email" placeholder="coach@example.com" />
+      </div>
+      <button class="btn-primary" id="reset-btn">
+        <span class="spinner" id="reset-spinner"></span>
+        <span id="reset-label">Send Reset Link</span>
+      </button>
+      <div class="divider"><span>or</span></div>
+      <button class="link-btn" id="back-to-signin" style="width:100%;text-align:center;">← Back to Sign In</button>
+    </div>
+  </div>
+
+  <script>
+    // ── If already logged in, go to dashboard ──────────────────
+    (async () => {
+      const { data } = await BAPAuth.getClient().auth.getSession();
+      if (data?.session) {
+        const redir = sessionStorage.getItem('bap_redirect');
+        window.location.replace(redir || 'dashboard.html');
+      }
+    })();
+
+    // ── Tab switching ──────────────────────────────────────────
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+        clearAlert();
+      });
+    });
+
+    // ── Password visibility toggles ────────────────────────────
+    document.querySelectorAll('.pw-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inp = document.getElementById(btn.dataset.target);
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+      });
+    });
+
+    // ── Forgot / back links ────────────────────────────────────
+    document.getElementById('forgot-btn').addEventListener('click', () => {
+      showPanel('forgot');
+    });
+    document.getElementById('back-to-signin').addEventListener('click', () => {
+      showPanel('signin');
+    });
+
+    function showPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      clearAlert();
+    }
+
+    // ── Alert helpers ──────────────────────────────────────────
+    function showAlert(msg, type = 'error') {
+      const el = document.getElementById('alert');
+      el.textContent = msg;
+      el.className = 'alert ' + type;
+    }
+    function clearAlert() {
+      const el = document.getElementById('alert');
+      el.className = 'alert';
+    }
+
+    // ── Loading state helpers ──────────────────────────────────
+    function setLoading(btnId, spinnerId, labelId, loading) {
+      document.getElementById(btnId).disabled = loading;
+      document.getElementById(spinnerId).style.display = loading ? 'block' : 'none';
+      document.getElementById(labelId).style.opacity  = loading ? '0' : '1';
+    }
+
+    // ── SIGN IN ────────────────────────────────────────────────
+    document.getElementById('signin-btn').addEventListener('click', async () => {
+      const email    = document.getElementById('si-email').value.trim();
+      const password = document.getElementById('si-password').value;
+      if (!email || !password) { showAlert('Please enter your email and password.'); return; }
+
+      setLoading('signin-btn', 'signin-spinner', 'signin-label', true);
+      clearAlert();
+      try {
+        await BAPAuth.signIn(email, password);
+        const redir = sessionStorage.getItem('bap_redirect');
+        sessionStorage.removeItem('bap_redirect');
+        window.location.replace(redir || 'dashboard.html');
+      } catch (err) {
+        showAlert(err.message || 'Sign-in failed. Check your credentials.');
+      } finally {
+        setLoading('signin-btn', 'signin-spinner', 'signin-label', false);
+      }
+    });
+
+    // Enter key on sign-in fields
+    ['si-email', 'si-password'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('signin-btn').click();
+      });
+    });
+
+    // ── SIGN UP ────────────────────────────────────────────────
+    document.getElementById('signup-btn').addEventListener('click', async () => {
+      const name     = document.getElementById('su-name').value.trim();
+      const email    = document.getElementById('su-email').value.trim();
+      const password = document.getElementById('su-password').value;
+
+      if (!name || !email || !password) { showAlert('All fields are required.'); return; }
+      if (password.length < 8) { showAlert('Password must be at least 8 characters.'); return; }
+
+      setLoading('signup-btn', 'signup-spinner', 'signup-label', true);
+      clearAlert();
+      try {
+        await BAPAuth.signUp(email, password, name);
+        showAlert('✅ Account created! Check your email to confirm your address, then sign in.', 'success');
+        // Switch to sign-in tab after short delay
+        setTimeout(() => {
+          document.querySelector('[data-tab="signin"]').click();
+          document.getElementById('si-email').value = email;
+        }, 2500);
+      } catch (err) {
+        showAlert(err.message || 'Registration failed. Try again.');
+      } finally {
+        setLoading('signup-btn', 'signup-spinner', 'signup-label', false);
+      }
+    });
+
+    // ── PASSWORD RESET ─────────────────────────────────────────
+    document.getElementById('reset-btn').addEventListener('click', async () => {
+      const email = document.getElementById('reset-email').value.trim();
+      if (!email) { showAlert('Enter your email address.'); return; }
+
+      setLoading('reset-btn', 'reset-spinner', 'reset-label', true);
+      clearAlert();
+      try {
+        const { error } = await BAPAuth.getClient().auth.resetPasswordForEmail(email, {
+          redirectTo: 'https://tlew-account.github.io/bap/reset-password.html',
+        });
+        if (error) throw error;
+        showAlert('✅ Reset link sent — check your inbox.', 'success');
+      } catch (err) {
+        showAlert(err.message || 'Could not send reset link.');
+      } finally {
+        setLoading('reset-btn', 'reset-spinner', 'reset-label', false);
+      }
+    });
+  </script>
+</body>
+</html>
